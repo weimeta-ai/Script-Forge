@@ -105,10 +105,11 @@ cmd_init() {
     info "生成 .env.production..."
 
     # 自动生成强密钥
-    local PG_PWD MINIO_KEY JWT_SECRET
-    PG_PWD=$(openssl rand -hex 16)
-    MINIO_KEY=$(openssl rand -hex 16)
-    JWT_SECRET=$(openssl rand -hex 32)
+    local deploy_pg_password deploy_minio_password deploy_jwt_secret deploy_admin_password
+    deploy_pg_password=$(openssl rand -hex 16)
+    deploy_minio_password=$(openssl rand -hex 16)
+    deploy_jwt_secret=$(openssl rand -hex 32)
+    deploy_admin_password=$(openssl rand -hex 16)
 
     cat > "$ENV_FILE" <<EOF
 # 生产环境配置（含密钥，绝对不能进 git，绝对不能分享）
@@ -117,25 +118,29 @@ cmd_init() {
 # ============== 数据库 ==============
 POSTGRES_DB=drama_predict
 POSTGRES_USER=drama
-POSTGRES_PASSWORD=$PG_PWD
+POSTGRES_PASSWORD=$deploy_pg_password
 
 # ============== MinIO 对象存储 ==============
 MINIO_ACCESS_KEY=drama-minio-admin
-MINIO_SECRET_KEY=$MINIO_KEY
+MINIO_SECRET_KEY=$deploy_minio_password
 MINIO_BUCKET=drama-exports
 
 # ============== JWT 鉴权 ==============
-JWT_SECRET=$JWT_SECRET
+JWT_SECRET=$deploy_jwt_secret
 JWT_EXPIRES_IN=7d
 REFRESH_TOKEN_EXPIRES_IN=30d
 
 # ============== LLM Provider ==============
-# 【必改】填你真实的通义千问 / DeepSeek / OpenAI API Key
+# 留空也可以启动，之后在管理员后台配置；不要把真实 Key 提交到 Git。
 LLM_PROVIDER=qwen
-LLM_API_KEY=sk-please-change-this-to-real-key
+LLM_API_KEY=
 LLM_MODEL=qwen-max
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_TIMEOUT_MS=90000
+
+# 初次执行 ./deploy.sh seed 时使用，脚本随机生成，seed 后请在密码管理器中保存并修改。
+SEED_ADMIN_USERNAME=admin
+SEED_ADMIN_PASSWORD=$deploy_admin_password
 
 # ============== CORS ==============
 # 同源部署（前后端同域名）可以填 *；分域名填具体 origin
@@ -147,7 +152,7 @@ EOF
     chmod 600 "$ENV_FILE"
     ok ".env.production 已生成（权限 600）"
     echo
-    warn "下一步：编辑 .env.production 把 LLM_API_KEY 改成真实 Key"
+    warn "下一步：检查 .env.production；可在管理员后台配置模型 API Key"
     info  "    nano $ENV_FILE"
     info  "    改完后执行：./deploy.sh start"
     info  "    然后执行：./deploy.sh seed  创建管理员账号"

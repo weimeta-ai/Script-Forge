@@ -102,7 +102,7 @@ git clone <你的仓库地址> .
 
 脚本会：
 1. 自动生成 `.env.production`（含强随机密码）
-2. 提示你**手动编辑 `.env.production` 把 `LLM_API_KEY` 改成真实 Key**
+2. 提示你检查 `.env.production`；模型 Key 可以留空，之后在管理员后台配置
 3. 改完后执行 `./deploy.sh start` 构建并启动
 
 > **首次构建耗时**：5-10 分钟（要下载 Chromium ~500MB + 中文字体）
@@ -111,10 +111,8 @@ git clone <你的仓库地址> .
 
 ```bash
 nano .env.production
-# 找到这一行，改成你真实的 Key
-# LLM_API_KEY=sk-please-change-this-to-real-key
-# 改成：
-# LLM_API_KEY=sk-你的真实通义千问Key
+# 可选：在这里配置模型 Key；也可以启动后在管理员后台配置
+# LLM_API_KEY=
 
 # 保存后启动
 ./deploy.sh start
@@ -334,13 +332,7 @@ docker volume rm drama-predict-web_pgdata   # ⚠️ 会清空数据库
 
 ### 8.3 LLM 调用 401
 
-检查 `.env.production` 的 `LLM_API_KEY`：
-
-```bash
-grep LLM_API_KEY .env.production
-```
-
-如果是 `sk-please-change-this-to-real-key`，说明没改成真实 Key。
+检查管理员后台中的模型地址、模型名称和 API Key。不要把真实 Key 粘贴到命令、日志、Issue 或 Git 提交中。
 
 ### 8.4 PDF 导出失败（Puppeteer）
 
@@ -404,7 +396,7 @@ gunzip -c backup-2026-06-26-030000.sql.gz | \
 | `POSTGRES_PASSWORD` | 随机 | ❌ | 数据库密码，脚本自动生成 |
 | `JWT_SECRET` | 随机 | ❌ | JWT 签名密钥，脚本自动生成 |
 | `MINIO_SECRET_KEY` | 随机 | ❌ | MinIO 密钥，脚本自动生成 |
-| `LLM_API_KEY` | placeholder | ✅ **必改** | LLM 服务商 API Key |
+| `LLM_API_KEY` | 空 | 可选 | LLM 服务商 API Key，也可以在管理员后台配置 |
 | `LLM_PROVIDER` | qwen | ❌ | LLM 服务商（qwen/deepseek/openai）|
 | `CORS_ORIGIN` | * | ❌ | 同源部署填 * 即可 |
 | `LOG_LEVEL` | info | ❌ | 日志级别（debug/info/warn/error）|
@@ -423,7 +415,7 @@ git clone <你的仓库地址> .
 # 2. 生成配置
 ./deploy.sh init
 
-# 3. 改 LLM_API_KEY
+# 3. （可选）配置 LLM_API_KEY；也可以启动后在管理员后台配置
 nano .env.production
 
 # 4. 构建 + 启动

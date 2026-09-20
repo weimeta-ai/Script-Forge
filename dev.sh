@@ -58,6 +58,52 @@ for arg in "$@"; do
   esac
 done
 
+# --- 本地配置初始化 ----------------------------------------------------------
+# 只在本机生成随机凭据；这些值会写入被 .gitignore 忽略的 backend/.env。
+set_env_value() {
+  local env_key="$1"
+  local env_value="$2"
+  local env_file="$3"
+
+  if grep -q "^${env_key}=" "$env_file"; then
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' "s|^${env_key}=.*|${env_key}=${env_value}|" "$env_file"
+    else
+      sed -i "s|^${env_key}=.*|${env_key}=${env_value}|" "$env_file"
+    fi
+  else
+    printf '\n%s=%s\n' "$env_key" "$env_value" >> "$env_file"
+  fi
+}
+
+ensure_dev_env() {
+  if [[ -f "$BACKEND_DIR/.env" ]]; then
+    return 0
+  fi
+
+  [[ -f "$BACKEND_DIR/.env.example" ]] || err "backend/.env.example 不存在，请检查代码完整性"
+  info "⚙️  从模板生成 backend/.env（随机凭据不会进入 Git）..."
+  cp "$BACKEND_DIR/.env.example" "$BACKEND_DIR/.env"
+
+  local dev_pg_password dev_minio_user dev_minio_password dev_jwt_secret dev_admin_password
+  dev_pg_password=$(openssl rand -hex 16)
+  dev_minio_user="drama-minio-$(openssl rand -hex 4)"
+  dev_minio_password=$(openssl rand -hex 16)
+  dev_jwt_secret=$(openssl rand -hex 32)
+  dev_admin_password=$(openssl rand -hex 16)
+
+  set_env_value "POSTGRES_PASSWORD" "$dev_pg_password" "$BACKEND_DIR/.env"
+  set_env_value "DATABASE_URL" "postgres://drama:${dev_pg_password}@localhost:5432/drama_predict" "$BACKEND_DIR/.env"
+  set_env_value "MINIO_ACCESS_KEY" "$dev_minio_user" "$BACKEND_DIR/.env"
+  set_env_value "MINIO_SECRET_KEY" "$dev_minio_password" "$BACKEND_DIR/.env"
+  set_env_value "JWT_SECRET" "$dev_jwt_secret" "$BACKEND_DIR/.env"
+  set_env_value "SEED_ADMIN_PASSWORD" "$dev_admin_password" "$BACKEND_DIR/.env"
+  chmod 600 "$BACKEND_DIR/.env"
+  ok "已生成 backend/.env（权限 600，管理员初始密码由 seed 脚本输出）"
+}
+
+ensure_dev_env
+
 # --- 前置检查 ----------------------------------------------------------------
 command -v docker >/dev/null 2>&1 || {
   [[ $SKIP_DOCKER -eq 1 ]] || err "未检测到 docker，请安装 Docker Desktop 或用 --no-docker 跳过"
@@ -115,16 +161,6 @@ if [[ $DO_INIT -eq 1 ]]; then
   info "📦 安装依赖..."
   pnpm install || err "依赖安装失败"
 
-  # 自动配置 backend/.env（如不存在）
-  if [[ ! -f "$BACKEND_DIR/.env" ]]; then
-    info "⚙️  生成 backend/.env..."
-    cp "$BACKEND_DIR/.env.example" "$BACKEND_DIR/.env"
-    JWT_SECRET=$(openssl rand -hex 32)
-    sed -i '' "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" "$BACKEND_DIR/.env" 2>/dev/null \
-      || sed -i "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" "$BACKEND_DIR/.env"
-    info "   已生成强 JWT_SECRET，请按需修改 LLM_API_KEY 等其他字段"
-  fi
-
   info "🗄️  执行数据库迁移..."
   (cd "$BACKEND_DIR" && pnpm db:migrate) || err "数据库迁移失败"
 
@@ -138,29 +174,7 @@ if [[ $DO_INIT -eq 1 ]]; then
 fi
 
 # =============================================================================
-# 步骤 3：自动同步 backend/.env（首次启动或文件丢失时）
-# =============================================================================
-if [[ $SKIP_BACKEND -eq 0 ]]; then
-  if [[ ! -f "$BACKEND_DIR/.env" ]]; then
-    info "⚙️  backend/.env 不存在，从 .env.example 自动创建..."
-    if [[ ! -f "$BACKEND_DIR/.env.example" ]]; then
-      err "backend/.env.example 也不存在，请检查代码完整性"
-    fi
-    cp "$BACKEND_DIR/.env.example" "$BACKEND_DIR/.env"
-    # 自动生成强 JWT_SECRET（覆盖模板里的弱默认值）
-    JWT_SECRET=$(openssl rand -hex 32)
-    if [[ "$(uname)" == "Darwin" ]]; then
-      sed -i '' "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" "$BACKEND_DIR/.env"
-    else
-      sed -i "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" "$BACKEND_DIR/.env"
-    fi
-    ok "已生成 backend/.env（含强 JWT_SECRET）"
-    info "⚠️  请按需修改 .env 中的 LLM_API_KEY、DATABASE_URL 等字段后重启"
-  fi
-fi
-
-# =============================================================================
-# 步骤 4：启动后端 API + Worker
+# 步骤 3：启动后端 API + Worker
 # =============================================================================
 if [[ $SKIP_BACKEND -eq 0 ]]; then
   info "🚀 启动后端 API（端口 5174）..."
@@ -182,7 +196,7 @@ if [[ $SKIP_BACKEND -eq 0 ]]; then
 fi
 
 # =============================================================================
-# 步骤 5：启动前端
+# 步骤 4：启动前端
 # =============================================================================
 if [[ $SKIP_FRONTEND -eq 0 ]]; then
   info "🎨 启动前端（端口 3000）..."
@@ -191,7 +205,7 @@ if [[ $SKIP_FRONTEND -eq 0 ]]; then
 fi
 
 # =============================================================================
-# 步骤 6：保持前台运行，等待 Ctrl+C
+# 步骤 5：保持前台运行，等待 Ctrl+C
 # =============================================================================
 echo
 ok "全部启动完成。按 Ctrl+C 退出。"

@@ -32,13 +32,13 @@ services:
     container_name: drama-postgres      # 容器名（方便日志查看）
     restart: unless-stopped             # 重启策略：除非手动停止，否则自动重启
     ports:
-      - '5432:5432'                     # 主机端口:容器端口
+      - '127.0.0.1:5432:5432'           # 仅本机访问，避免数据库暴露到公网
     environment:
       # 这些环境变量会被 PostgreSQL 启动脚本读取
       # 第一次启动时会自动创建数据库 + 用户
       POSTGRES_DB: ${POSTGRES_DB:-drama_predict}
       POSTGRES_USER: ${POSTGRES_USER:-drama}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-drama_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in backend/.env}
       TZ: Asia/Shanghai                 # 时区，时间字段会用这个
     volumes:
       # 数据持久化：把容器内的 /var/lib/postgresql/data 映射到 Docker 管理的卷
@@ -65,7 +65,7 @@ services:
     container_name: drama-redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'           # 仅本机访问，避免 Redis 暴露到公网
     # appendonly yes = 开启 AOF 持久化（断电不丢队列任务）
     command: redis-server --appendonly yes
     volumes:
@@ -94,11 +94,11 @@ services:
     container_name: drama-minio
     restart: unless-stopped
     ports:
-      - '9000:9000'                     # API 端口
-      - '9001:9001'                     # 控制台端口
+      - '127.0.0.1:9000:9000'           # API 端口，仅本机访问
+      - '127.0.0.1:9001:9001'           # 控制台端口，仅本机访问
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set in backend/.env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set in backend/.env}
     # 启动命令：server 模式 + 开启控制台
     command: server /data --console-address ':9001'
     volumes:

@@ -41,6 +41,10 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# 生产配置与数据库备份（可能包含凭据或业务数据）
+*.sql.gz
+backup-*
+
 # umi
 .umi
 .umi-production
