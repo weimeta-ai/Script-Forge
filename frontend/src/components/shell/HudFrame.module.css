@@ -1,0 +1,125 @@
+/* HudFrame — HUD 顶底状态条 + 四角描边
+ * 全页启用（仪表盘感）
+ * 顶条：左侧 logo dot pulse + 项目指标 + 中央 mini 波形 + 右侧时钟
+ * 底条：左侧运行时状态 + 中央 mini 波形 + 右侧 PIPELINE
+ */
+
+.frame {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 100svh;
+}
+
+/* HUD 顶/底状态条 — 深咖色嵌入感 */
+.barTop,
+.barBottom {
+	position: sticky;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 24px;
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	letter-spacing: var(--ls-wide-lg);
+	text-transform: uppercase;
+	color: var(--color-sidebar-text-muted);
+	background-color: var(--color-sidebar-bg);
+	background-image: linear-gradient(90deg, rgb(255 122 77 / 6%) 0%, transparent 30%, transparent 70%, rgb(255 122 77 / 6%) 100%);
+}
+
+.barTop {
+	top: 0;
+	border-bottom: 1px solid var(--color-sidebar-border);
+}
+
+.barBottom {
+	bottom: 0;
+	border-top: 1px solid var(--color-sidebar-border);
+}
+
+/* 顶条左侧 logo dot pulse 装饰（CSS 伪元素） */
+.barTop::before {
+	content: '';
+	position: absolute;
+	left: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background-color: var(--color-sidebar-accent);
+	box-shadow: 0 0 0 0 rgb(255 122 77 / 60%);
+	animation: pulse-primary 2s ease-in-out infinite;
+}
+
+.barSide {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+/* 左侧 aside 留出 logo dot 空间 */
+.barSide:first-child {
+	padding-left: 14px;
+}
+
+.barItem {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.barItem svg {
+	width: 11px;
+	height: 11px;
+	color: var(--color-sidebar-accent);
+}
+
+.barSep {
+	color: var(--color-sidebar-text-subtle);
+	opacity: 0.4;
+}
+
+.dotPulse {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background-color: var(--color-sidebar-accent);
+	animation: pulse-primary 2s ease-in-out infinite;
+}
+
+/* mini 波形装饰（顶条中央，纯 CSS 实现） */
+.barTop::after,
+.barBottom::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 120px;
+	height: 14px;
+	background-image: repeating-linear-gradient(
+		90deg,
+		rgb(255 122 77 / 40%) 0,
+		rgb(255 122 77 / 40%) 1px,
+		transparent 1px,
+		transparent 4px
+	);
+	mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+/* 主体（被状态条夹住的内容区） */
+.body {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+}

@@ -1,0 +1,2 @@
+ALTER TABLE "tasks" ADD COLUMN "mode" varchar(20) DEFAULT 'standard' NOT NULL;--> statement-breakpoint
+ALTER TABLE "llm_settings" ADD COLUMN "default_analyze_mode" varchar(20) DEFAULT 'standard' NOT NULL;

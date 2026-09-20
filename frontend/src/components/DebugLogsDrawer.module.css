@@ -1,0 +1,370 @@
+/* 调试日志抽屉样式 — 右侧抽屉 + 暗色终端风 */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	background-color: rgb(0 0 0 / 50%);
+	backdrop-filter: blur(2px);
+}
+
+.drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 1001;
+	display: flex;
+	flex-direction: column;
+	width: min(680px, 92vw);
+	background-color: rgb(8 12 24 / 95%);
+	border-left: 1px solid rgb(232 220 203 / 80%);
+	box-shadow: -20px 0 60px rgb(0 0 0 / 50%);
+}
+
+/* ========== 头部 ========== */
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 20px;
+	border-bottom: 1px solid rgb(232 220 203 / 60%);
+	background-color: rgb(12 16 28 / 80%);
+}
+
+.headerLeft {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.headerIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	border: 1px solid rgb(217 119 70 / 30%);
+	background-color: rgb(217 119 70 / 10%);
+	color: var(--color-primary);
+}
+
+.headerIcon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.title {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: var(--fw-semibold);
+	color: var(--color-text);
+	letter-spacing: var(--ls-tight);
+}
+
+.subtitle {
+	margin: 2px 0 0;
+	font-size: var(--text-xs);
+	color: var(--color-text-muted);
+	line-height: var(--lh-normal);
+}
+
+.shortcutHint {
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	background-color: rgb(217 119 70 / 15%);
+	border-radius: 3px;
+	padding: 1px 4px;
+	color: var(--color-primary);
+}
+
+.closeBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 6px;
+	border: 1px solid var(--color-border);
+	background-color: rgb(245 239 226 / 60%);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.closeBtn:hover {
+	border-color: rgb(220 38 38 / 50%);
+	color: rgb(252 165 165);
+}
+
+.closeBtn svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* ========== 过滤栏 ========== */
+.filterBar {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 20px;
+	border-bottom: 1px solid rgb(232 220 203 / 60%);
+	background-color: rgb(12 16 28 / 50%);
+}
+
+.filterRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.filterIcon {
+	width: 14px;
+	height: 14px;
+	color: var(--color-text-subtle);
+	flex-shrink: 0;
+}
+
+.chipRow {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 10px;
+	border-radius: 4px;
+	border: 1px solid var(--color-border);
+	background-color: rgb(245 239 226 / 60%);
+	color: var(--color-text-muted);
+	font-size: var(--text-xs);
+	cursor: pointer;
+	transition: all 0.15s;
+	font-family: inherit;
+}
+
+.chip:hover {
+	border-color: rgb(217 119 70 / 50%);
+	color: var(--color-primary);
+}
+
+.chipActive {
+	border-color: rgb(217 119 70 / 60%);
+	background-color: rgb(217 119 70 / 15%);
+	color: var(--color-primary);
+}
+
+.select {
+	height: 28px;
+	border-radius: 6px;
+	border: 1px solid var(--color-border);
+	background-color: rgb(8 12 24 / 70%);
+	color: var(--color-text);
+	font-size: var(--text-xs);
+	padding: 0 8px;
+	font-family: inherit;
+	cursor: pointer;
+}
+
+.searchRow {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 1;
+	border-radius: 6px;
+	border: 1px solid var(--color-border);
+	background-color: rgb(8 12 24 / 70%);
+	padding: 0 8px;
+	height: 28px;
+}
+
+.searchIcon {
+	width: 12px;
+	height: 12px;
+	color: var(--color-text-subtle);
+	flex-shrink: 0;
+}
+
+.searchInput {
+	flex: 1;
+	border: none;
+	background: transparent;
+	color: var(--color-text);
+	font-size: var(--text-xs);
+	outline: none;
+	font-family: inherit;
+}
+
+.searchInput::placeholder {
+	color: var(--color-text-subtle);
+}
+
+/* ========== 日志列表 ========== */
+.logList {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px 0;
+	font-family: var(--font-mono);
+}
+
+.loadingRow,
+.emptyRow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 24px;
+	color: var(--color-text-subtle);
+	font-size: var(--text-xs);
+	font-family: var(--font-sans, inherit);
+}
+
+.spinner {
+	width: 14px;
+	height: 14px;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ========== 单条日志 ========== */
+.logRow {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 20px;
+	border-left: 3px solid transparent;
+	transition: background-color 0.15s;
+}
+
+.logRow:hover {
+	background-color: rgb(255 255 255 / 3%);
+}
+
+.logHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.logTime {
+	font-size: var(--text-xs);
+	color: var(--color-text-subtle);
+	letter-spacing: var(--ls-wide-xs);
+}
+
+.logLevel {
+	display: inline-flex;
+	align-items: center;
+	height: 16px;
+	padding: 0 6px;
+	border-radius: 3px;
+	font-size: var(--text-xs);
+	font-weight: var(--fw-semibold);
+	letter-spacing: var(--ls-wide-xs);
+}
+
+.levelBadgeError {
+	background-color: rgb(220 38 38 / 20%);
+	color: rgb(252 165 165);
+	border: 1px solid rgb(220 38 38 / 40%);
+}
+
+.levelBadgeWarn {
+	background-color: rgb(234 179 8 / 20%);
+	color: rgb(254 240 138);
+	border: 1px solid rgb(234 179 8 / 40%);
+}
+
+.levelBadgeInfo {
+	background-color: rgb(217 119 70 / 15%);
+	color: var(--color-primary);
+	border: 1px solid rgb(217 119 70 / 30%);
+}
+
+.levelBadgeDebug {
+	background-color: rgb(161 161 170 / 15%);
+	color: var(--color-text-muted);
+	border: 1px solid rgb(161 161 170 / 30%);
+}
+
+.logCategory {
+	display: inline-flex;
+	align-items: center;
+	height: 16px;
+	padding: 0 6px;
+	border-radius: 3px;
+	font-size: var(--text-xs);
+	background-color: rgb(255 255 255 / 5%);
+	color: var(--color-text-muted);
+}
+
+.catSystem {
+	background-color: rgb(161 161 170 / 15%);
+	color: rgb(212 212 216);
+}
+
+.catScore,
+
+
+.catLlm {
+	background-color: rgb(20 184 166 / 15%);
+	color: rgb(94 234 212);
+}
+
+.catReport {
+	background-color: rgb(234 88 12 / 15%);
+	color: rgb(253 186 116);
+}
+
+.logDim {
+	font-size: var(--text-xs);
+	color: var(--color-primary);
+	background-color: rgb(217 119 70 / 10%);
+	padding: 1px 4px;
+	border-radius: 2px;
+}
+
+.logMessage {
+	font-size: var(--text-xs);
+	color: var(--color-text);
+	line-height: var(--lh-normal);
+}
+
+.logMeta {
+	font-size: var(--text-xs);
+	color: var(--color-text-muted);
+	line-height: var(--lh-normal);
+	word-break: break-all;
+	opacity: 0.8;
+}
+
+/* 按 level 着色左边框 */
+.levelError {
+	border-left-color: rgb(220 38 38 / 60%);
+}
+
+.levelWarn {
+	border-left-color: rgb(234 179 8 / 60%);
+}
+
+.levelInfo {
+	border-left-color: rgb(217 119 70 / 50%);
+}
+
+.levelDebug {
+	border-left-color: rgb(161 161 170 / 30%);
+}

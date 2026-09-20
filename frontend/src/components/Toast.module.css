@@ -1,0 +1,83 @@
+/* Toast 容器 — 固定在右上角，避开顶部导航 */
+.container {
+	position: fixed;
+	top: 24px;
+	right: 24px;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-width: 360px;
+	pointer-events: none;
+}
+
+.toast {
+	pointer-events: auto;
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	border: 1px solid;
+	backdrop-filter: blur(12px);
+	font-size: var(--text-sm);
+	line-height: 1.5;
+	box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.toast svg {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	margin-top: 1px;
+}
+
+.message {
+	flex: 1;
+	min-width: 0;
+	word-break: break-word;
+}
+
+.closeBtn {
+	flex-shrink: 0;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	color: inherit;
+	opacity: 0.5;
+	font-size: var(--text-xs);
+	line-height: 1;
+}
+
+.closeBtn:hover {
+	opacity: 1;
+}
+
+/* 类型配色 — 复用项目暖色调，错误用红、成功用绿、信息用主色橙 */
+.error {
+	border-color: rgb(220 38 38 / 30%);
+	background: linear-gradient(
+		rgb(254 226 226 / 95%),
+		rgb(254 226 226 / 95%)
+	);
+	color: rgb(153 27 27);
+}
+
+.success {
+	border-color: rgb(22 163 74 / 30%);
+	background: linear-gradient(
+		rgb(220 252 231 / 95%),
+		rgb(220 252 231 / 95%)
+	);
+	color: rgb(22 101 52);
+}
+
+.info {
+	border-color: rgb(217 119 70 / 30%);
+	background: linear-gradient(
+		rgb(255 237 213 / 95%),
+		rgb(255 237 213 / 95%)
+	);
+	color: rgb(154 52 18);
+}

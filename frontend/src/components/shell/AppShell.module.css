@@ -1,0 +1,75 @@
+/* AppShell — 页面外壳
+ * 组合 PageBackground + HudFrame + AppSidebar + 主体内容
+ */
+
+.shell {
+	position: relative;
+	display: flex;
+	width: 100%;
+	min-height: 100svh;
+}
+
+/* 主体内容区（Sidebar 右侧） */
+.main {
+	position: relative;
+	z-index: 1;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.content {
+	flex: 1;
+	width: 100%;
+	max-width: 1480px;
+	margin-inline: auto;
+	padding: 32px 40px 48px;
+	min-width: 0;
+}
+
+@media (max-width: 1024px) {
+	.content {
+		padding: 24px 28px 36px;
+	}
+}
+
+@media (max-width: 768px) {
+	.content {
+		padding: 20px 16px 32px;
+	}
+}
+
+/* 移动端遮罩（菜单打开时） */
+.mask {
+	position: fixed;
+	inset: 0;
+	z-index: 15;
+	background-color: rgb(60 40 20 / 40%);
+	backdrop-filter: blur(4px);
+}
+
+/* 移动端顶部汉堡按钮 */
+.menuBtn {
+	position: fixed;
+	top: 14px;
+	left: 14px;
+	z-index: 25;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	border: 1px solid var(--color-border);
+	background-color: rgb(255 252 246 / 90%);
+	backdrop-filter: blur(8px);
+	color: var(--color-text);
+	cursor: pointer;
+}
+
+@media (max-width: 768px) {
+	.menuBtn {
+		display: flex;
+	}
+}

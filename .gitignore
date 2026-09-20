@@ -1,0 +1,66 @@
+# =============================================================================
+# .gitignore - monorepo（frontend + backend）
+# =============================================================================
+
+# dependencies
+node_modules
+**/node_modules
+/.pnp
+.pnp.js
+
+# testing
+coverage
+**/coverage
+
+# 前端构建产物
+/frontend/dist
+/frontend/dist-*
+/frontend/build
+/dist
+/dist-*
+/build
+
+# 后端构建产物 + 日志
+/backend/dist
+/backend/logs
+/backend/*.log
+
+# misc
+.DS_Store
+*.pem
+*.local
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 环境变量（含密钥，绝对不能进 git）
+.env
+.env.*
+!.env.example
+
+# umi
+.umi
+.umi-production
+.umi-test
+
+# editor
+.idea
+.vscode
+
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 工具临时
+.spec-workflow
+*.mobile-*.png
+*.playwright-mcp
+*.zip
+
+# 本地素材源文件（发布图片已复制至 docs/images/）
+图片和附件/

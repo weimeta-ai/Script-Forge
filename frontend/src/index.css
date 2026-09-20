@@ -1,0 +1,970 @@
+/* =============================================================================
+ * 全局样式 — p00 纸本审片台风（Neo-Cinema Premium）
+ * -----------------------------------------------------------------------------
+ * 配色：暖纸米白 #F7F2E8 + 朱砂红 #B8443C + 深墨黑 #1C1815
+ * 字体：思源宋体（衬线展示）+ 思源黑体（无衬线正文）+ JetBrains Mono（等宽）
+ * 装饰：SVG 噪点纹理（胶片颗粒）+ 纸纹网格
+ * =============================================================================
+ */
+
+/* 思源宋体 / 思源黑体 — 衬线展示字 + 中文无衬线 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
+ * 全局基础层（在 @theme 之前，确保兜底样式优先级足够）
+ * - cursor：Tailwind v4 preflight 移除了 button/a 的默认小手，需手动补回
+ * - focus-visible：全站键盘焦点可见性，覆盖 .input-cinema 的 outline:none
+ * ============================================================================= */
+button:not(:disabled),
+[role='button']:not(:disabled),
+a[href],
+summary {
+	cursor: pointer;
+}
+button:disabled,
+[role='button'][aria-disabled='true'] {
+	cursor: not-allowed;
+}
+:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+@theme {
+	/* 字体家族 — 衬线 + 无衬线 + 等宽 */
+	--font-sans: 'Noto Sans SC', 'Inter', -apple-system, 'PingFang SC',
+		'Microsoft YaHei', 'Source Han Sans CN', system-ui, sans-serif;
+	--font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'GT Sectra',
+		'Tiempos Headline', georgia, serif;
+	--font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'PingFang SC',
+		ui-monospace, monospace;
+	--font-display: 'Noto Serif SC', 'Source Han Serif SC', georgia, serif;
+
+	/* 字重 token（4 档） */
+	--fw-regular: 400;
+	--fw-medium: 500;
+	--fw-semibold: 600;
+	--fw-bold: 700;
+
+	/* 字距 token（衬线大标题用紧字距） */
+	--ls-tight: -0.02em;
+	--ls-tighter: -0.03em;
+	--ls-normal: 0;
+	--ls-wide-xs: 0.05em;
+	--ls-wide-sm: 0.1em;
+	--ls-wide-md: 0.12em;
+	--ls-wide-lg: 0.15em;
+	--ls-wide-xl: 0.18em;
+
+	/* 行高 token */
+	--lh-tight: 1.05;
+	--lh-snug: 1.2;
+	--lh-normal: 1.5;
+	--lh-relaxed: 1.6;
+	--lh-loose: 1.85;
+
+	/* 表面色阶（暖纸米白） */
+	--color-background: #f7f2e8; /* 主背景：暖纸米白（p00 cream-50） */
+	--color-surface: #fffbf5; /* 卡片：纯白偏暖 */
+	--color-surface-2: #f1e9db; /* 表格行/输入框：浅暖米 */
+	--color-border: #e3d7c5; /* 边框：浅暖咖灰 */
+	--color-border-strong: #d6c5a8;
+
+	/* 主色：朱砂红（p00 cinnabar / amber-500） */
+	--color-primary: #b8443c; /* 朱砂红 */
+	--color-primary-hover: #98352f; /* 深朱砂 */
+	--color-primary-soft: #d6655b; /* 浅朱砂（hover 高亮） */
+	--color-primary-deep: #7a2d28; /* 暗朱砂 */
+	--color-primary-fg: #f7f2e8; /* 朱砂按钮上的米白文字 */
+	--color-secondary: #1c1815; /* 深墨黑 */
+
+	/* 状态色（保持暖色系） */
+	--color-warning: #d97706;
+	--color-danger: #b8443c; /* 与主色统一（朱砂） */
+	--color-success: #8b7a3c; /* 月白偏黄（不用绿色） */
+
+	/* 辅助强调色（用于状态/标签，不超过 20% 面积） */
+	--color-accent-cyan: #5b7ba8; /* 深夜蓝（信息标签） */
+	--color-accent-amber: #d4a574; /* 琥珀金（次级强调） */
+	--color-accent-violet: #6b4c8c;
+	--color-accent-emerald: #5a8b5a;
+
+	/* 文字色阶（暖灰系） */
+	--color-text: #1c1815; /* 主文字：深墨黑（p00 ink-950） */
+	--color-text-muted: #66594c; /* 次要：暖灰（p00 ink-700） */
+	--color-text-subtle: #8b7b6a; /* 占位：浅暖灰（p00 ink-600） */
+	--color-text-disabled: #a8a395;
+	--spacing-page-x: 1.5rem;
+
+	/* 字号 */
+	--text-xs: 0.6875rem;
+	--text-sm: 0.8125rem;
+	--text-base: 0.875rem;
+	--text-lg: 1rem;
+	--text-xl: 1.25rem;
+	--text-2xl: 1.5rem;
+	--text-3xl: 2rem;
+	--text-4xl: 2.5rem;
+	--text-display: 4.5rem;
+
+	/* 圆角 — p00 温润感（8 / 14 / 20） */
+	--radius-sm: 0.25rem; /* 4px：按钮、标签 */
+	--radius-md: 0.5rem; /* 8px：卡片（p00 主档） */
+	--radius-lg: 0.875rem; /* 14px：大卡片 */
+	--radius-xl: 1.25rem; /* 20px：容器 */
+
+	/* 阴影（p00 暖咖柔阴影） */
+	--shadow-paper: 0 1px 0 rgb(255 255 255 / 60%) inset,
+		0 12px 40px rgb(94 61 42 / 8%);
+	--shadow-paper-lg: 0 1px 0 rgb(255 255 255 / 60%) inset,
+		0 18px 48px rgb(94 61 42 / 12%);
+
+	/* 缓动（p00 同款） */
+	--ease-cinema-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-cinema-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* sidebar 折叠/展开用 — 短促过渡 */
+	--ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+	/* 朱砂发光（聚焦/激活） */
+	--shadow-glow-primary: 0 0 0 1px rgb(184 68 60 / 40%),
+		0 8px 24px rgb(184 68 60 / 15%);
+
+	/* 朱砂柔光（卡片浮起） */
+	--shadow-glow-soft: 0 0 0 1px rgb(184 68 60 / 8%),
+		0 8px 32px rgb(184 68 60 / 12%);
+
+	/* 径向背景光（不抢戏） */
+	--bg-radial-paper: radial-gradient(
+			60% 50% at 20% 0%,
+			rgb(184 68 60 / 6%) 0%,
+			transparent 45%
+		),
+		radial-gradient(
+			60% 50% at 80% 100%,
+			rgb(143 124 108 / 8%) 0%,
+			transparent 50%
+		);
+
+	/* === 侧栏配色（暖咖黑深棕暗背景 — Arc/Raycast 风格） === */
+	--color-sidebar-bg: #1f1611; /* 主背景：深暖咖黑 */
+	--color-sidebar-bg-soft: #2a1f17; /* hover 态：稍亮深咖 */
+	--color-sidebar-bg-elevated: #362a1f; /* 凸起态：最亮咖 */
+	--color-sidebar-border: #3d2f23; /* 边框：暖咖 */
+	--color-sidebar-border-strong: #5a4533; /* 强边框：浅暖咖 */
+	--color-sidebar-text: #f5efe2; /* 主文字：浅米白 */
+	--color-sidebar-text-muted: #c4b5a0; /* 次要：暖灰米 */
+	--color-sidebar-text-subtle: #9a8a75; /* 占位：浅暖灰 */
+	--color-sidebar-accent: #b8443c; /* 强调：朱砂红（与全局主色一致） */
+	--color-sidebar-gold: #d4a574; /* 琥珀金（brandSub 用） */
+}
+
+/* 暗色主题（v1 不启用，仅保留入口） */
+.dark {
+	--color-background: #1a1612;
+	--color-surface: #221c16;
+	--color-text: #f4ece0;
+}
+
+@layer base {
+	* {
+		border-color: var(--color-border);
+	}
+
+	html {
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		font-feature-settings: 'kern' 1, 'liga' 1;
+		text-rendering: optimizelegibility;
+		font-variant-numeric: tabular-nums;
+	}
+
+	body {
+		margin: 0;
+		background: var(--color-background);
+		color: var(--color-text);
+		font-size: var(--text-base);
+		line-height: var(--lh-relaxed);
+		position: relative;
+		min-height: 100svh;
+	}
+
+	/* 纸纹暖光（顶层不可见装饰） */
+	body::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 0;
+		background: var(--bg-radial-paper);
+	}
+
+	/* SVG 噪点纹理（胶片颗粒感）— 移除 mix-blend-mode 避免全屏合成层混合卡顿 */
+	body::after {
+		content: '';
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 0;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.88  0 0 0 0 0.83  0 0 0 0 0.76  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.03'/></svg>");
+		background-size: 160px 160px;
+		opacity: 0.5;
+	}
+
+	#root {
+		position: relative;
+		z-index: 1;
+		min-height: 100svh;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	::selection {
+		background: var(--color-primary);
+		color: var(--color-primary-fg);
+	}
+
+	code,
+	pre,
+	kbd {
+		font-family: var(--font-mono);
+	}
+
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: rgb(102 89 76 / 4%);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: rgb(102 89 76 / 20%);
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: rgb(184 68 60 / 40%);
+	}
+}
+
+/* =============================================================================
+ * p00 工具类 — 纸本审片台 Neo-Cinema Premium
+ * ============================================================================= */
+
+/* 字体快捷类 */
+.font-serif {
+	font-family: var(--font-serif);
+	font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+}
+
+.font-mono {
+	font-family: var(--font-mono);
+}
+
+/* 衬线斜体小字标签（章节小标） */
+.eyebrow {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-size: 12px;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--color-primary);
+}
+
+/* 衬线粗体大标题（紧字距） */
+.headline {
+	font-family: var(--font-serif);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	color: var(--color-text);
+}
+
+/* 渐变文字（朱砂 → 浅金 → 朱砂，仅用于品牌字） */
+.text-amber-gradient {
+	background: linear-gradient(135deg, #d4a574 0%, #e8c896 50%, #b8474d 100%);
+	background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* 朱砂渐变文字（用于关键数据） */
+.text-cinema-gradient {
+	background: linear-gradient(135deg, #d6655b 0%, #b8443c 60%, #7a2d28 100%);
+	background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* Pull-Quote 引用块（左侧朱砂竖条 + 衬线斜体） */
+.pull-quote {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-weight: 500;
+	font-size: clamp(20px, 2.2vw, 28px);
+	line-height: 1.5;
+	color: var(--color-text);
+	border-left: 3px solid var(--color-primary);
+	padding-left: 24px;
+}
+
+/* 玻璃纸本面板（主卡片） — 移除 backdrop-filter 避免大面积合成层卡顿 */
+.panel-paper {
+/* 	background: rgb(255 251 245 / 92%);
+	border: 1px solid rgb(102 89 76 / 14%);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-paper); */
+}
+
+/* 柔和纸本面板（次级容器） */
+.panel-paper-soft {
+	background: rgb(255 252 247 / 82%);
+	border: 1px solid rgb(102 89 76 / 10%);
+	border-radius: var(--radius-lg);
+}
+
+/* 输入框（透明背景 + 描边 + 朱砂 focus） */
+.input-cinema {
+	width: 100%;
+	background: rgb(255 251 245 / 88%);
+	border: 1px solid rgb(102 89 76 / 18%);
+	border-radius: var(--radius-md);
+	padding: 12px 14px;
+	color: var(--color-text);
+	font-family: var(--font-sans);
+	font-size: 15px;
+	outline: none;
+	transition: border-color 200ms ease, background 200ms ease,
+		box-shadow 200ms ease;
+}
+
+.input-cinema::placeholder {
+	color: var(--color-text-subtle);
+}
+
+.input-cinema:hover:not(:focus) {
+	border-color: rgb(102 89 76 / 36%);
+}
+
+.input-cinema:focus {
+	border-color: var(--color-primary);
+	background: rgb(255 255 255 / 98%);
+	box-shadow: 0 0 0 3px rgb(184 68 60 / 10%);
+}
+
+/* 朱砂实心按钮（p00 .btn-primary） */
+.btn-cinema-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background: var(--color-primary);
+	color: var(--color-primary-fg);
+	font-family: var(--font-sans);
+	font-weight: 600;
+	font-size: 15px;
+	letter-spacing: 0.02em;
+	padding: 12px 24px;
+	border-radius: 10px;
+	border: 1px solid var(--color-primary);
+	transition: all 220ms var(--ease-cinema-out);
+	cursor: pointer;
+}
+
+/* 紧凑版朱砂按钮（PipelineStatusBar / Hero CTA 用，尺寸由 inline style 控制） */
+.btn-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	background: var(--color-primary);
+	color: var(--color-primary-fg);
+	font-family: var(--font-sans);
+	border-radius: 10px;
+	border: 1px solid var(--color-primary);
+	transition: all 220ms var(--ease-cinema-out);
+	cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+	background: var(--color-primary-soft);
+	border-color: var(--color-primary-soft);
+	transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* 紧凑版 ghost 按钮（描边 + hover 朱砂） */
+.btn-ghost {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	background: transparent;
+	color: var(--color-text);
+	font-family: var(--font-sans);
+	border-radius: 10px;
+	border: 1px solid rgb(102 89 76 / 20%);
+	transition: all 220ms ease;
+	cursor: pointer;
+}
+
+.btn-ghost:hover:not(:disabled) {
+	border-color: var(--color-primary);
+	color: var(--color-primary);
+	background: rgb(184 68 60 / 4%);
+}
+
+.btn-ghost:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-cinema-primary:hover:not(:disabled) {
+	background: var(--color-primary-soft);
+	box-shadow: 0 0 0 1px rgb(184 68 60 / 24%), 0 10px 28px rgb(184 68 60 / 20%);
+	transform: translateY(-1px);
+}
+
+.btn-cinema-primary:active:not(:disabled) {
+	transform: translateY(0);
+	box-shadow: 0 0 0 1px rgb(184 68 60 / 18%), 0 4px 12px rgb(184 68 60 / 14%);
+}
+
+.btn-cinema-primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Ghost 按钮（描边 + hover 变朱砂） */
+.btn-cinema-ghost {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background: transparent;
+	color: var(--color-text);
+	font-family: var(--font-sans);
+	font-weight: 500;
+	font-size: 15px;
+	padding: 12px 24px;
+	border-radius: 10px;
+	border: 1px solid rgb(102 89 76 / 20%);
+	transition: all 220ms ease;
+	cursor: pointer;
+}
+
+.btn-cinema-ghost:hover {
+	border-color: var(--color-primary);
+	color: var(--color-primary);
+	background: rgb(184 68 60 / 4%);
+}
+
+/* 胶囊形 Tab（用于模式切换） */
+.tab-cinema {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	font-family: var(--font-sans);
+	font-size: 14px;
+	border-radius: 999px;
+	border: 1px solid rgb(102 89 76 / 10%);
+	background: rgb(102 89 76 / 4%);
+	color: var(--color-text-muted);
+	transition: all 200ms ease;
+	cursor: pointer;
+}
+
+.tab-cinema.is-active {
+	color: var(--color-primary-fg);
+	background: var(--color-primary);
+	border-color: var(--color-primary);
+}
+
+.tab-cinema:hover:not(.is-active) {
+	color: var(--color-text);
+	background: rgb(102 89 76 / 8%);
+}
+
+/* 章节大数字（衬线粗体 32px） */
+.chapter-num {
+	font-family: var(--font-serif);
+	font-weight: 700;
+	font-size: 32px;
+	line-height: 1;
+	color: var(--color-text-subtle);
+	letter-spacing: -0.02em;
+}
+
+/* 分镜卡（左侧朱砂竖条 + 状态描边） */
+.shot-card {
+	background: rgb(255 252 247 / 92%);
+	border: 1px solid rgb(102 89 76 / 12%);
+	border-radius: var(--radius-lg);
+	padding: 20px 24px;
+	position: relative;
+	transition: all 240ms ease;
+	box-shadow: 0 10px 32px rgb(99 77 61 / 5%);
+}
+
+.shot-card.is-active {
+	border-color: var(--color-primary);
+}
+
+.shot-card.is-active::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--color-primary);
+	border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.shot-card.is-done {
+	border-color: rgb(184 68 60 / 22%);
+}
+
+/* 电影画幅（2.35:1 + 上下黑边） */
+.cinema-aspect {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 2.35 / 1;
+	overflow: hidden;
+	border-radius: var(--radius-sm);
+	background: var(--color-secondary);
+}
+
+.cinema-aspect::before,
+.cinema-aspect::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 24px;
+	background: var(--color-secondary);
+	z-index: 2;
+	pointer-events: none;
+}
+
+.cinema-aspect::before {
+	top: 0;
+}
+
+.cinema-aspect::after {
+	bottom: 0;
+}
+
+/* 节点连接虚线 */
+.shot-connector {
+	width: 1px;
+	height: 24px;
+	margin: 0 auto;
+	background-image: linear-gradient(
+		to bottom,
+		rgb(28 24 21 / 20%) 50%,
+		transparent 50%
+	);
+	background-size: 1px 6px;
+	background-repeat: repeat-y;
+}
+
+/* 目录项（hover 朱砂 + 当前项左竖条） */
+.toc-item {
+	display: block;
+	padding: 8px 12px 8px 16px;
+	border-left: 2px solid transparent;
+	font-size: 14px;
+	color: var(--color-text-muted);
+	transition: all 200ms ease;
+	cursor: pointer;
+	line-height: 1.4;
+}
+
+.toc-item:hover {
+	color: var(--color-primary);
+}
+
+.toc-item.is-active {
+	border-left-color: var(--color-primary);
+	color: var(--color-text);
+	font-weight: 500;
+}
+
+/* 拖拽上传区（虚线 + 朱砂 hover） */
+.dropzone-cinema {
+	border: 1px dashed rgb(102 89 76 / 22%);
+	background: rgb(255 252 247 / 84%);
+	border-radius: var(--radius-md);
+	transition: all 240ms ease;
+	cursor: pointer;
+}
+
+.dropzone-cinema:hover,
+.dropzone-cinema.is-drag {
+	border-color: var(--color-primary);
+	background: rgb(184 68 60 / 4%);
+}
+
+/* 进度条（极细 2px 朱砂渐变） */
+.progress-line {
+	height: 2px;
+	background: rgb(102 89 76 / 12%);
+	position: relative;
+	overflow: hidden;
+}
+
+.progress-line-fill {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		var(--color-primary),
+		var(--color-primary-soft)
+	);
+	transform-origin: left;
+	transition: transform 600ms var(--ease-cinema-out);
+}
+
+/* 报告正文（Markdown 渲染样式） */
+.report-body {
+	font-family: var(--font-sans);
+	font-size: 16px;
+	line-height: 1.85;
+	color: var(--color-text);
+}
+
+.report-body h1,
+.report-body h2,
+.report-body h3 {
+	font-family: var(--font-serif);
+	color: var(--color-text);
+	letter-spacing: -0.01em;
+	margin-top: 2.2em;
+	margin-bottom: 0.8em;
+}
+
+.report-body h1 {
+	font-size: 40px;
+	font-weight: 700;
+	line-height: 1.15;
+	border-bottom: 1px solid rgb(102 89 76 / 14%);
+	padding-bottom: 16px;
+}
+
+.report-body h2 {
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.2;
+	scroll-margin-top: 140px;
+}
+
+.report-body h3 {
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--color-primary);
+	line-height: 1.3;
+	scroll-margin-top: 140px;
+}
+
+.report-body p {
+	margin: 1.2em 0;
+	color: rgb(40 35 30);
+}
+
+.report-body ul,
+.report-body ol {
+	padding-left: 1.5em;
+	margin: 1em 0;
+}
+
+.report-body li {
+	margin: 0.5em 0;
+}
+
+.report-body strong {
+	color: var(--color-text);
+	font-weight: 700;
+}
+
+.report-body blockquote {
+	border-left: 3px solid var(--color-primary);
+	padding: 10px 0 10px 20px;
+	margin: 1.5em 0;
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-size: 18px;
+	color: var(--color-text-muted);
+	line-height: 1.5;
+	background: rgb(184 68 60 / 4%);
+}
+
+.report-body code {
+	font-family: var(--font-mono);
+	background: rgb(102 89 76 / 8%);
+	color: var(--color-primary-hover);
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 0.92em;
+}
+
+.report-body table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 1.5em 0;
+	font-size: 14px;
+}
+
+.report-body th,
+.report-body td {
+	text-align: left;
+	padding: 12px 16px;
+	border: 1px solid rgb(102 89 76 / 14%);
+}
+
+.report-body th {
+	background: rgb(184 68 60 / 5%);
+	color: var(--color-primary);
+	font-weight: 600;
+	font-family: var(--font-serif);
+}
+
+.report-body hr {
+	border: 0;
+	border-top: 1px solid rgb(102 89 76 / 14%);
+	margin: 3em 0;
+}
+
+.report-body img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin: 1.5em auto;
+	border-radius: 12px;
+	box-shadow: 0 4px 14px rgb(102 89 76 / 8%);
+}
+
+/* =============================================================================
+ * 海报瀑布流动画（登录页用，p00 同款错速反向滚动）
+ * ============================================================================= */
+@keyframes marquee-up {
+	0% {
+		transform: translate3d(0, 0, 0);
+	}
+
+	100% {
+		transform: translate3d(0, -50%, 0);
+	}
+}
+
+@keyframes marquee-down {
+	0% {
+		transform: translate3d(0, -50%, 0);
+	}
+
+	100% {
+		transform: translate3d(0, 0, 0);
+	}
+}
+
+.animate-marquee-up {
+	animation: marquee-up 60s linear infinite;
+}
+
+.animate-marquee-down {
+	animation: marquee-down 80s linear infinite;
+}
+
+/* 通用旋转动画（loading 图标用） */
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* 入场淡入上移（章节级联用） */
+@keyframes fade-up {
+	0% {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.animate-fade-up {
+	animation: fade-up 0.6s var(--ease-cinema-out) both;
+}
+
+/* =============================================================================
+ * 流程状态条 running 圆点的脉冲扩散环（PipelineStatusBar）
+ * =============================================================================
+ */
+@keyframes pipeline-pulse {
+	0% {
+		transform: scale(0.85);
+		opacity: 0.85;
+	}
+
+	70% {
+		transform: scale(1.4);
+		opacity: 0;
+	}
+
+	100% {
+		transform: scale(1.4);
+		opacity: 0;
+	}
+}
+
+/* =============================================================================
+ * 进度条动画（AnimatedProgress 组件）
+ * =============================================================================
+ */
+
+/* 流光扫过：白色高光带从左到右循环穿透已填充区域 */
+.progress-shimmer {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		100deg,
+		transparent 20%,
+		rgba(255, 255, 255, 0.35) 50%,
+		transparent 80%
+	);
+	background-size: 200% 100%;
+	background-position: -150% 0;
+	animation: progress-shimmer 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+	pointer-events: none;
+}
+
+@keyframes progress-shimmer {
+	0% {
+		background-position: -150% 0;
+	}
+
+	100% {
+		background-position: 250% 0;
+	}
+}
+
+/* 时间线 running 圆点的脉冲环（向外扩散 + 淡出） */
+@keyframes pulse-ring {
+	0% {
+		transform: scale(0.9);
+		opacity: 0.7;
+	}
+
+	70% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+
+	100% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+}
+
+/* 时间线节点脉冲：进行中状态的呼吸光晕 */
+@keyframes timeline-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(184, 68, 60, 35%);
+	}
+
+	50% {
+		box-shadow: 0 0 0 5px rgba(184, 68, 60, 8%);
+	}
+}
+
+/* 斜纹流动：45° 条纹向右滚动 */
+.progress-stripes {
+	position: absolute;
+	inset: 0;
+	background-image: repeating-linear-gradient(
+		45deg,
+		rgba(255, 255, 255, 0.18) 0,
+		rgba(255, 255, 255, 0.18) 6px,
+		transparent 6px,
+		transparent 12px
+	);
+	background-size: 24px 24px;
+	animation: progress-stripes 1s linear infinite;
+	pointer-events: none;
+}
+
+@keyframes progress-stripes {
+	0% {
+		background-position: 0 0;
+	}
+
+	100% {
+		background-position: 24px 0;
+	}
+}
+
+/* 前沿脉冲：进度条右端呼吸式光晕（需配合组件内 left:% 定位） */
+.progress-edge-glow {
+	position: absolute;
+	top: 50%;
+	width: 12px;
+	height: 200%;
+	transform: translate(-50%, -50%);
+	background: radial-gradient(
+		ellipse at center,
+		rgba(230, 181, 138, 0.7) 0%,
+		rgba(201, 90, 79, 0.3) 40%,
+		transparent 70%
+	);
+	filter: blur(3px);
+	animation: progress-edge-glow 1.4s ease-in-out infinite;
+	pointer-events: none;
+}
+
+@keyframes progress-edge-glow {
+	0%,
+	100% {
+		opacity: 0.55;
+	}
+
+	50% {
+		opacity: 1;
+	}
+}
+
+/* =============================================================================
+ * 全局动画禁用（性能优化，与 motion/react reducedMotion="always" 配合）
+ * =============================================================================
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

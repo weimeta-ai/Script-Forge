@@ -1,0 +1,101 @@
+/* PageBackground — 花里胡哨版（全页启用装饰）
+ * L1 基础：径向渐变 + 40px 网格
+ * L2 氛围：光球 + 小水印 + 粒子（6）+ 噪点
+ * L3 仪表盘：上述 + 中等水印 + 粒子（8）
+ * L4 焦点：上述 + 大水印 + 粒子（12）+ 鼠标光斑
+ */
+
+.bg {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+	background-color: var(--color-background);
+	background-image: var(--bg-radial-primary);
+	background-position: center top;
+	background-repeat: no-repeat;
+}
+
+/* ========== 网格 ========== */
+.grid {
+	position: absolute;
+	inset: 0;
+	background-image:
+		linear-gradient(rgb(230 74 25 / 6%) 1px, transparent 1px),
+		linear-gradient(90deg, rgb(230 74 25 / 6%) 1px, transparent 1px);
+	background-size: 40px 40px;
+	mask-image: radial-gradient(ellipse 80% 60% at center, black 30%, transparent 80%);
+}
+
+/* ========== 光球（静态，无动画 — 性能优化） ========== */
+.orb {
+	position: absolute;
+	border-radius: 50%;
+	pointer-events: none;
+	filter: blur(80px);
+}
+
+.orb1 {
+	left: -120px;
+	top: 15%;
+	width: 320px;
+	height: 320px;
+	background-color: rgb(230 74 25 / 14%);
+}
+
+.orb2 {
+	right: -80px;
+	top: 40%;
+	width: 280px;
+	height: 280px;
+	background-color: rgb(255 122 77 / 10%);
+}
+
+.orb3 {
+	left: 30%;
+	bottom: -100px;
+	width: 380px;
+	height: 380px;
+	background-color: rgb(230 74 25 / 8%);
+}
+
+/* ========== 水印（三档尺寸） ========== */
+.watermark {
+	position: absolute;
+	bottom: -40px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-family: var(--font-mono);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-tight);
+	white-space: nowrap;
+	user-select: none;
+	z-index: 1;
+}
+
+.watermarkSm {
+	font-size: clamp(120px, 16vw, 180px);
+	color: rgb(230 74 25 / 3%);
+}
+
+.watermarkMd {
+	font-size: clamp(160px, 20vw, 240px);
+	color: rgb(230 74 25 / 3.5%);
+}
+
+.watermarkLg {
+	font-size: clamp(200px, 24vw, 320px);
+	color: rgb(230 74 25 / 4%);
+	bottom: -60px;
+}
+
+/* ========== 噪点（移除 mix-blend-mode — 性能优化） ========== */
+.noise {
+	position: absolute;
+	inset: 0;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+	opacity: 0.02;
+	pointer-events: none;
+}

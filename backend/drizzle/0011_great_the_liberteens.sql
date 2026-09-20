@@ -1,0 +1,1 @@
+ALTER TABLE "credit_rules" ADD COLUMN "description" text;

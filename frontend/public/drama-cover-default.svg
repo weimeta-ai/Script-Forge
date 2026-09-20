@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.5" r="0.85">
+      <stop offset="0" stop-color="#FCFAF5"/>
+      <stop offset="0.55" stop-color="#FAF5EC"/>
+      <stop offset="1" stop-color="#F5EBD8"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFBF5"/>
+      <stop offset="1" stop-color="#F5EBD8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="480" height="640" fill="url(#bg)"/>
+
+  <g opacity="0.7">
+    <line x1="44" y1="58" x2="116" y2="58" stroke="#D4B896" stroke-width="1"/>
+    <circle cx="124" cy="58" r="2" fill="#D4B896"/>
+  </g>
+  <text x="44" y="80" font-family="ui-monospace, monospace" font-size="9" letter-spacing="2.5" fill="#A68B6B" opacity="0.75">NO COVER · 待上传</text>
+
+  <text x="436" y="62" text-anchor="end" font-family="serif" font-size="15" font-weight="700" fill="#5D4037" opacity="0.55" letter-spacing="2">短剧</text>
+  <text x="436" y="78" text-anchor="end" font-family="ui-monospace, monospace" font-size="8" letter-spacing="1.5" fill="#A68B6B" opacity="0.7">PREDICT</text>
+
+  <g transform="translate(240 290)">
+    <rect x="-86" y="-110" width="172" height="232" rx="8" fill="#5D4037" opacity="0.08" transform="translate(4 10)"/>
+
+    <path d="M -86 -110 L 70 -110 L 86 -94 L 86 110 L -86 110 Z" fill="url(#paper)"/>
+
+    <path d="M 70 -110 L 70 -94 L 86 -94 Z" fill="#E8D5B7" opacity="0.75"/>
+    <path d="M 70 -110 L 86 -94" stroke="#D4B896" stroke-width="0.8" fill="none" opacity="0.65"/>
+
+    <path d="M -86 -110 L 70 -110 L 86 -94 L 86 110 L -86 110 Z" fill="none" stroke="#D4B896" stroke-width="0.8" opacity="0.55"/>
+
+    <g fill="#D4B896" opacity="0.7">
+      <rect x="-62" y="-80" width="124" height="3" rx="1.5"/>
+      <rect x="-62" y="-68" width="100" height="2" rx="1"/>
+      <rect x="-62" y="-60" width="110" height="2" rx="1"/>
+      <rect x="-62" y="-52" width="80" height="2" rx="1"/>
+    </g>
+
+    <line x1="-30" y1="-28" x2="30" y2="-28" stroke="#D4B896" stroke-width="0.6" opacity="0.5"/>
+
+    <g transform="translate(0 30) rotate(-8)">
+      <rect x="-2.5" y="-28" width="5" height="40" fill="#B8443C" opacity="0.9"/>
+      <polygon points="-2.5,12 2.5,12 0,22" fill="#5D4037" opacity="0.9"/>
+      <rect x="-3.5" y="-32" width="7" height="6" rx="1" fill="#5D4037" opacity="0.85"/>
+      <circle cx="0" cy="-29" r="1" fill="#FFFBF5" opacity="0.7"/>
+    </g>
+
+    <g fill="#D4B896" opacity="0.5">
+      <rect x="-62" y="72" width="124" height="2" rx="1"/>
+      <rect x="-62" y="80" width="100" height="2" rx="1"/>
+    </g>
+  </g>
+
+  <line x1="200" y1="540" x2="280" y2="540" stroke="#D4B896" stroke-width="1" opacity="0.75"/>
+  <text x="240" y="562" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" letter-spacing="4" fill="#5D4037" opacity="0.75">DRAMA · PREDICT</text>
+  <text x="240" y="582" text-anchor="middle" font-family="ui-monospace, monospace" font-size="8" letter-spacing="2.5" fill="#A68B6B" opacity="0.65">SCRIPT INTELLIGENCE</text>
+</svg>

@@ -1,0 +1,68 @@
+{
+  "name": "drama-predict-backend",
+  "version": "1.0.0",
+  "description": "短剧预测系统后端 - 3 阶段流水线（导入→分析→导出）",
+  "type": "module",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc --noEmit && tsup src/server.ts src/workers/index.ts --format esm --out-dir dist --minify --sourcemap && mkdir -p dist/prompts && cp src/prompts/*.md dist/prompts/",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "test": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/scripts/seed-admin.ts",
+    "db:seed:prompts": "tsx src/scripts/seed-prompts.ts",
+    "db:seed:credit-rules": "tsx src/scripts/seed-credit-rules.ts",
+    "worker": "tsx watch src/workers/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
+    "@hono/node-server": "^1.13.0",
+    "ali-oss": "^6.23.0",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.30.0",
+    "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.36.0",
+    "fflate": "^0.8.3",
+    "hono": "^4.12.26",
+    "ioredis": "^5.4.0",
+    "jose": "^5.9.0",
+    "mammoth": "^1.12.0",
+    "markdown-it": "^14.1.0",
+    "openai": "^6.44.0",
+    "pdf-parse": "^2.4.5",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "postgres": "^3.4.0",
+    "puppeteer": "^23.11.1",
+    "uuid": "^11.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/ali-oss": "^6.23.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.10.0",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^9.18.0",
+    "pino-pretty": "^11.3.0",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.21.0",
+    "vitest": "^2.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract",
+      "puppeteer"
+    ]
+  }
+}

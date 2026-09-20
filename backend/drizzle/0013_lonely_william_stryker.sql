@@ -1,0 +1,1 @@
+ALTER TABLE "llm_settings" ADD COLUMN "api_format" varchar(20) DEFAULT 'openai' NOT NULL;

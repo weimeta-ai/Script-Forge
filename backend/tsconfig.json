@@ -1,0 +1,57 @@
+{
+  // ===========================================================================
+  // TypeScript 编译配置
+  // ---------------------------------------------------------------------------
+  // 【前端转全栈知识点】
+  // tsconfig.json 是什么：
+  //   告诉 TypeScript 编译器"怎么编译你的代码"。
+  //   类比 vite.config.ts，但管的是 .ts → .js 转换。
+  //
+  // 为什么后端需要：
+  //   - Node.js 默认不认识 TypeScript（Node 22 才开始实验性支持）
+  //   - 需要 tsc 把 .ts 编译成 .js 才能运行
+  //   - 开发时用 tsx 工具直接跑 .ts（免去编译步骤，热重载）
+  //
+  // 关键字段说明：
+  //   target      编译成哪个 JS 版本（ES2022 = Node 18+ 都支持）
+  //   module      模块系统（NodeNext = Node 标准 ESM）
+  //   moduleResolution  模块查找规则（NodeNext 配合 module 用）
+  //   outDir      编译产物输出目录
+  //   rootDir     源代码根目录
+  //   strict      开启所有严格类型检查（强烈推荐）
+  //   skipLibCheck 跳过 node_modules 内的类型检查（加速编译）
+  // ===========================================================================
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    // 严格模式全家桶（让 TypeScript 真正发挥作用）
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // 模块解析优化
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Bundler 模式允许无后缀 import（drizzle-kit / esbuild / tsx 都支持）
+    // 比 NodeNext 的强制 .js 后缀更通用
+    "allowImportingTsExtensions": false,
+
+    // 输出配置
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    // 类型定义来源
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}

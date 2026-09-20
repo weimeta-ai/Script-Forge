@@ -1,0 +1,25 @@
+{
+  "name": "drama-predict",
+  "version": "1.0.0",
+  "license": "AGPL-3.0",
+  "description": "短剧预测系统 - 前后端 monorepo（frontend React + backend Hono）",
+  "type": "module",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "pnpm -C frontend dev",
+    "dev:backend": "pnpm -C backend dev",
+    "dev:all": "concurrently -n web,api -c yellow,cyan \"pnpm dev\" \"pnpm dev:backend\"",
+    "build": "pnpm -C frontend build && pnpm -C backend build",
+    "build:frontend": "pnpm -C frontend build",
+    "build:backend": "pnpm -C backend build",
+    "lint": "pnpm -C frontend lint && pnpm -C backend lint",
+    "test": "pnpm -C backend test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract",
+      "puppeteer"
+    ]
+  }
+}
