@@ -57,10 +57,10 @@ export interface CreditRule {
 // admin 调整 category（区分后台充值/人工补偿/人工扣减，决定流水 type）
 export type AdjustCategory = 'recharge' | 'compensate' | 'deduct';
 
-// admin 调整积分入参
+// admin 调整积分入参（remark 选填：调配原因内容自定义，空则不传）
 export interface AdjustCreditsInput {
 	delta: number;
-	remark: string;
+	remark?: string;
 	category: AdjustCategory;
 }
 

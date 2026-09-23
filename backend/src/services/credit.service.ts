@@ -319,7 +319,7 @@ export type AdjustCategory = 'recharge' | 'compensate' | 'deduct'
 export async function adjustCredits(input: {
   userId: string
   delta: number // 正数=充值/补偿，负数=扣减
-  remark: string
+  remark?: string // 选填：调配原因（内容自定义），空则落 NULL
   adminId: string
   category: AdjustCategory // 区分后台充值/人工补偿/人工扣减，决定流水 type
 }): Promise<{ balanceAfter: number }> {
@@ -381,7 +381,7 @@ export async function adjustCredits(input: {
         type: txType,
         refTaskId: null,
         refRuleCode: null,
-        remark,
+        remark: remark ?? null,
         operatedBy: adminId,
       },
       tx,

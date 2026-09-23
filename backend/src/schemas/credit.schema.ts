@@ -9,13 +9,18 @@
 
 import { z } from 'zod'
 
-// admin 调整积分：正负整数 + 必填备注 + category（区分后台充值/人工补偿/人工扣减）
+// admin 调整积分：正负整数 + 选填备注（内容自定义）+ category（区分后台充值/人工补偿/人工扣减）
 export const adjustCreditsSchema = z.object({
   delta: z
     .number()
     .int()
     .refine((v) => v !== 0, '调整量不能为 0'),
-  remark: z.string().min(1, '请填写备注').max(255),
+  remark: z
+    .string()
+    .max(255, '备注最长 255 字')
+    .optional()
+    // 空串/纯空白归一为 undefined，落库为 NULL
+    .transform((v) => (v && v.trim() ? v.trim() : undefined)),
   category: z.enum(['recharge', 'compensate', 'deduct']),
 })
 
