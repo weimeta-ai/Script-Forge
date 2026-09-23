@@ -1,60 +1,60 @@
 // =============================================================================
-// 阿里云 OSS 客户端工具层（核心抽象）
+// OSS 对象存储适配层（核心抽象，双模式：阿里云 / MinIO S3 兼容）
 // -----------------------------------------------------------------------------
 // 设计要点：
+//   - 适配器模式：上层（service / signer）只依赖 OssAdapter 接口，
+//     新增服务商（如腾讯 COS）只需新增一个 Adapter 类，调用方零改动
+//   - aliyun 模式：ali-oss SDK（OSS 专有签名 HMAC-SHA1，bucket 直链）
+//   - minio 模式：minio SDK（S3 SigV4 协议，兼容 MinIO / AWS S3，预签名 URL）
 //   - 纯工具，不耦合 DB（service 层负责拿配置，本文件只接收 plain 配置）
-//   - 未来切换服务商（如腾讯云 COS / AWS S3）只需替换此文件
-//   - 工厂模式：每次调用按 effective config 创建 client（与 service 里 new OpenAI 同模式）
-//
-// 关键技术决策：
-//   - ali-oss 是 CJS 包，ESM 项目用默认导入：`import OSS from 'ali-oss'`
-//   - 远程图片拉取：Node 18+ 内置 fetch（项目已要求 Node 22）
 //   - 上传对象 key 规则：{pathPrefix}/{yy}/{mm}/{dd}/{uuid}.{ext}（按日期分桶）
-//   - 访问 URL 优先级：customDomain > bucket 公网直链
 // =============================================================================
 
 import OSS from 'ali-oss'
+import { Client as MinioClient } from 'minio'
 import { v4 as uuidv4 } from 'uuid'
 import { BusinessError } from './errors'
 
-// 客户端配置（plain，不脱敏）
-export interface OssClientConfig {
+// 存储模式
+export type OssProvider = 'aliyun' | 'minio'
+
+// 适配器配置（plain，不脱敏）
+export interface OssAdapterConfig {
+  provider: OssProvider
   accessKeyId: string
   accessKeySecret: string
   region: string
   bucket: string
   endpoint?: string | null
+  customDomain?: string | null
   timeout?: number
 }
 
-// 上传 Buffer 的入参
-export interface UploadBufferArgs {
-  client: OSS
-  key: string
-  buffer: Buffer
-  contentType: string
-  bucket: string
-  region: string
-  customDomain?: string | null
-}
-
-// 远程 URL 转存的入参
-export interface UploadFromUrlArgs {
-  client: OSS
-  sourceUrl: string
-  pathPrefix: string
-  filename?: string
-  contentType?: string
-  bucket: string
-  region: string
-  customDomain?: string | null
+// 统一适配器接口（上层唯一依赖面）
+export interface OssAdapter {
+  readonly provider: OssProvider
+  readonly bucket: string
+  readonly region: string
+  readonly customDomain: string | null
+  // 连通性测试：失败时抛 BusinessError（错误码 OSS_*）
+  test(): Promise<void>
+  // 上传 Buffer，返回 etag
+  put(key: string, buffer: Buffer, contentType: string): Promise<{ etag: string }>
+  // 删除对象（业务数据清理场景）
+  remove(key: string): Promise<void>
+  // 生成带签名的临时访问 URL（私有 bucket 场景）
+  signUrl(key: string, expiresSec: number): Promise<string>
+  // 对象的持久访问 URL（公开读 / customDomain 场景）
+  objectUrl(key: string): string
 }
 
 // 单文件大小上限（10MB，对应 OSS_FILE_TOO_LARGE）
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
-// 创建 OSS 客户端
-export function createOssClient(cfg: OssClientConfig): OSS {
+// =============================================================================
+// 适配器工厂（唯一入口）
+// =============================================================================
+export function createOssAdapter(cfg: OssAdapterConfig): OssAdapter {
   if (!cfg.accessKeyId || !cfg.accessKeySecret) {
     throw new BusinessError(
       'OSS_NOT_CONFIGURED',
@@ -69,28 +69,267 @@ export function createOssClient(cfg: OssClientConfig): OSS {
       400,
     )
   }
-
-  // endpoint 可选：未传时 ali-oss 根据 region 自动推导
-  const options: OSS.Options = {
-    accessKeyId: cfg.accessKeyId,
-    accessKeySecret: cfg.accessKeySecret,
-    region: cfg.region,
-    bucket: cfg.bucket,
-    secure: true, // 强制 HTTPS
-    timeout: cfg.timeout ?? 60000,
-  }
-  if (cfg.endpoint) {
-    options.endpoint = cfg.endpoint
-  }
-  return new OSS(options)
+  return cfg.provider === 'minio' ? new MinioAdapter(cfg) : new AliyunAdapter(cfg)
 }
 
-// 测试连接：列 1 个对象验证凭据 + bucket 访问权
-// bucketExists 在公开 bucket / 跨账号时可能行为不一，list 更可靠
-// 注：bucket/region 通过参数传入（OSS 类型未公开 options 字段）
+// =============================================================================
+// 阿里云 OSS 适配器（ali-oss SDK，HMAC-SHA1 专有签名）
+// =============================================================================
+class AliyunAdapter implements OssAdapter {
+  readonly provider = 'aliyun' as const
+  readonly bucket: string
+  readonly region: string
+  readonly customDomain: string | null
+  private client: OSS
+
+  constructor(cfg: OssAdapterConfig) {
+    this.bucket = cfg.bucket
+    this.region = cfg.region
+    this.customDomain = cfg.customDomain ?? null
+    // endpoint 可选：未传时 ali-oss 根据 region 自动推导
+    const options: OSS.Options = {
+      accessKeyId: cfg.accessKeyId,
+      accessKeySecret: cfg.accessKeySecret,
+      region: cfg.region,
+      bucket: cfg.bucket,
+      secure: true, // 强制 HTTPS
+      timeout: cfg.timeout ?? 60000,
+    }
+    if (cfg.endpoint) {
+      options.endpoint = cfg.endpoint
+    }
+    this.client = new OSS(options)
+  }
+
+  // 测试连接：列 1 个对象验证凭据 + bucket 访问权
+  // bucketExists 在公开 bucket / 跨账号时可能行为不一，list 更可靠
+  async test(): Promise<void> {
+    try {
+      await this.client.list({ 'max-keys': 1 }, {})
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  async put(key: string, buffer: Buffer, contentType: string): Promise<{ etag: string }> {
+    try {
+      const result = await this.client.put(key, buffer, {
+        mime: contentType,
+        headers: { 'Content-Type': contentType },
+      })
+      return { etag: (result as { etag?: string }).etag ?? '' }
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      await this.client.delete(key)
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  // signatureUrl 是同步函数（内部 HMAC-SHA1），包一层统一 async 接口
+  async signUrl(key: string, expiresSec: number): Promise<string> {
+    try {
+      return this.client.signatureUrl(key, { expires: expiresSec })
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  objectUrl(key: string): string {
+    if (this.customDomain) {
+      return `${this.customDomain.replace(/\/+$/, '')}/${key}`
+    }
+    return `https://${this.bucket}.${this.region}.aliyuncs.com/${key}`
+  }
+}
+
+// =============================================================================
+// MinIO / S3 兼容适配器（minio SDK，SigV4 签名 + 预签名 URL）
+// =============================================================================
+class MinioAdapter implements OssAdapter {
+  readonly provider = 'minio' as const
+  readonly bucket: string
+  readonly region: string
+  readonly customDomain: string | null
+  private client: MinioClient
+  // endpoint 的 scheme://host:port 前缀（拼公开 URL 用）
+  private endpointOrigin: string
+
+  constructor(cfg: OssAdapterConfig) {
+    this.bucket = cfg.bucket
+    this.region = cfg.region
+    this.customDomain = cfg.customDomain ?? null
+
+    // S3 模式必须显式指定 endpoint（无法从 region 推导），schema 层已校验
+    if (!cfg.endpoint) {
+      throw new BusinessError(
+        'OSS_NOT_CONFIGURED',
+        'MinIO 模式必须填写 Endpoint（如 http://localhost:9000）',
+        400,
+      )
+    }
+
+    let parsed: URL
+    try {
+      parsed = new URL(cfg.endpoint)
+    } catch {
+      throw new BusinessError(
+        'OSS_NOT_CONFIGURED',
+        `Endpoint 不是合法 URL：${cfg.endpoint}`,
+        400,
+      )
+    }
+
+    this.endpointOrigin = parsed.origin
+    this.client = new MinioClient({
+      endPoint: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : undefined,
+      useSSL: parsed.protocol === 'https:',
+      accessKey: cfg.accessKeyId,
+      secretKey: cfg.accessKeySecret,
+      // MinIO 服务端默认 region 为 us-east-1，无配置时 SDK 自动处理
+    })
+  }
+
+  // 测试连接：bucketExists 一次 RPC 即可验证凭据 + bucket 存在性
+  async test(): Promise<void> {
+    try {
+      const exists = await this.client.bucketExists(this.bucket)
+      if (!exists) {
+        throw new BusinessError(
+          'OSS_BUCKET_NOT_FOUND',
+          `Bucket 不存在：${this.bucket}（请先在 MinIO 控制台创建）`,
+          404,
+        )
+      }
+    } catch (e) {
+      if (e instanceof BusinessError) throw e
+      throw normalizeOssError(e)
+    }
+  }
+
+  async put(key: string, buffer: Buffer, contentType: string): Promise<{ etag: string }> {
+    try {
+      const info = await this.client.putObject(
+        this.bucket,
+        key,
+        buffer,
+        buffer.length,
+        { 'Content-Type': contentType },
+      )
+      return { etag: (info as { etag?: string }).etag ?? '' }
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      await this.client.removeObject(this.bucket, key)
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  // S3 SigV4 预签名 URL：host 为后端连接的 endpoint，
+  // 若浏览器与后端网络视图不同（如容器内网），需配置 customDomain 重写
+  async signUrl(key: string, expiresSec: number): Promise<string> {
+    try {
+      const signed = await this.client.presignedGetObject(this.bucket, key, expiresSec)
+      return this.rewriteHost(signed)
+    } catch (e) {
+      throw normalizeOssError(e)
+    }
+  }
+
+  objectUrl(key: string): string {
+    if (this.customDomain) {
+      return `${this.customDomain.replace(/\/+$/, '')}/${key}`
+    }
+    return `${this.endpointOrigin}/${this.bucket}/${key}`
+  }
+
+  // 预签名 URL 的查询参数（签名/过期时间）必须保留，仅替换 host 部分
+  private rewriteHost(signedUrl: string): string {
+    if (!this.customDomain) return signedUrl
+    try {
+      const url = new URL(signedUrl)
+      const domain = new URL(this.customDomain.replace(/\/+$/, ''))
+      url.protocol = domain.protocol
+      url.host = domain.host
+      return url.toString()
+    } catch {
+      return signedUrl
+    }
+  }
+}
+
+// =============================================================================
+// 编排函数（拉取 → 生成 key → 上传 → 拼 URL，两种模式共用）
+// =============================================================================
+
+// 远程 URL 转存（核心场景：AI 生成图片的临时 URL → 对象存储永久 URL）
+export async function uploadFromUrl(args: {
+  adapter: OssAdapter
+  sourceUrl: string
+  pathPrefix: string
+  filename?: string
+  contentType?: string
+}): Promise<{
+  url: string
+  key: string
+  contentType: string
+  size: number
+}> {
+  const { adapter, sourceUrl, pathPrefix, filename, contentType: hintCt } = args
+
+  const { buffer, contentType, ext } = await fetchSourceAsBuffer(
+    sourceUrl,
+    hintCt,
+    filename ? extractExtFromFilename(filename) : undefined,
+  )
+
+  const key = generateObjectKey(pathPrefix, ext)
+  await adapter.put(key, buffer, contentType)
+
+  return {
+    url: adapter.objectUrl(key),
+    key,
+    contentType,
+    size: buffer.length,
+  }
+}
+
+// 上传 Buffer（后端代理 multipart 上传场景）
+export async function uploadBuffer(args: {
+  adapter: OssAdapter
+  key: string
+  buffer: Buffer
+  contentType: string
+}): Promise<{
+  url: string
+  key: string
+  etag: string
+  size: number
+}> {
+  const { adapter, key, buffer, contentType } = args
+  const { etag } = await adapter.put(key, buffer, contentType)
+  return {
+    url: adapter.objectUrl(key),
+    key,
+    etag,
+    size: buffer.length,
+  }
+}
+
+// 连通性测试（service 层的 /test 接口用）
 export async function testOssConnectivity(
-  client: OSS,
-  meta: { bucket: string; region: string },
+  adapter: OssAdapter,
 ): Promise<{
   ok: boolean
   latencyMs: number
@@ -98,18 +337,12 @@ export async function testOssConnectivity(
   regionEcho: string
 }> {
   const startedAt = Date.now()
-  try {
-    // list 不指定 prefix 时返回根目录前 max-keys 个对象
-    // 注：objects 可能为空（bucket 无对象），但只要不抛异常即视为凭据有效
-    await client.list({ 'max-keys': 1 }, {})
-    return {
-      ok: true,
-      latencyMs: Date.now() - startedAt,
-      bucketEcho: meta.bucket,
-      regionEcho: meta.region,
-    }
-  } catch (e) {
-    throw normalizeOssError(e, startedAt)
+  await adapter.test()
+  return {
+    ok: true,
+    latencyMs: Date.now() - startedAt,
+    bucketEcho: adapter.bucket,
+    regionEcho: adapter.region,
   }
 }
 
@@ -125,20 +358,9 @@ export function generateObjectKey(pathPrefix: string, ext: string): string {
   return `${trimmedPrefix}/${yyyy}/${mm}/${dd}/${uuid}.${safeExt}`
 }
 
-// 根据是否有 customDomain 返回最终访问 URL
-export function buildObjectUrl(args: {
-  key: string
-  customDomain?: string | null
-  bucket: string
-  region: string
-}): string {
-  const { key, customDomain, bucket, region } = args
-  if (customDomain) {
-    const domain = customDomain.replace(/\/+$/, '')
-    return `${domain}/${key}`
-  }
-  return `https://${bucket}.${region}.aliyuncs.com/${key}`
-}
+// -----------------------------------------------------------------------------
+// 辅助函数
+// -----------------------------------------------------------------------------
 
 // 从 URL 或 data: 协议解析 contentType 与 buffer
 async function fetchSourceAsBuffer(
@@ -236,72 +458,6 @@ async function fetchSourceAsBuffer(
   return { buffer, contentType, ext }
 }
 
-// 上传 Buffer 到 OSS
-export async function uploadBuffer(args: UploadBufferArgs): Promise<{
-  url: string
-  key: string
-  etag: string
-  size: number
-}> {
-  const { client, key, buffer, contentType, bucket, region, customDomain } = args
-  const startedAt = Date.now()
-  try {
-    const result = await client.put(key, buffer, {
-      mime: contentType,
-      headers: {
-        'Content-Type': contentType,
-      },
-    })
-    const url = buildObjectUrl({ key, customDomain, bucket, region })
-    return {
-      url,
-      key: result.name ?? key,
-      etag: (result as { etag?: string }).etag ?? '',
-      size: buffer.length,
-    }
-  } catch (e) {
-    throw normalizeOssError(e, startedAt)
-  }
-}
-
-// 远程 URL 转存（核心场景：AI 生成图片的临时 URL → OSS 永久 URL）
-export async function uploadFromUrl(args: UploadFromUrlArgs): Promise<{
-  url: string
-  key: string
-  contentType: string
-  size: number
-}> {
-  const { client, sourceUrl, pathPrefix, filename, contentType: hintCt, bucket, region, customDomain } = args
-
-  const { buffer, contentType, ext } = await fetchSourceAsBuffer(
-    sourceUrl,
-    hintCt,
-    filename ? extractExtFromFilename(filename) : undefined,
-  )
-
-  const key = generateObjectKey(pathPrefix, ext)
-  const result = await uploadBuffer({
-    client,
-    key,
-    buffer,
-    contentType,
-    bucket,
-    region,
-    customDomain,
-  })
-
-  return {
-    url: result.url,
-    key: result.key,
-    contentType,
-    size: result.size,
-  }
-}
-
-// -----------------------------------------------------------------------------
-// 辅助函数
-// -----------------------------------------------------------------------------
-
 function mimeToExt(mime: string, fallback?: string): string {
   const map: Record<string, string> = {
     'image/jpeg': 'jpg',
@@ -338,42 +494,42 @@ function extractExtFromFilename(filename: string): string | undefined {
   return filename.slice(dotIdx + 1).toLowerCase()
 }
 
-// 错误归一化（与 image-config.service 风格一致）
-function normalizeOssError(e: unknown, startedAt: number): BusinessError {
+// 错误归一化（ali-oss 与 minio SDK 的错误都归一到 OSS_* 业务错误码）
+// 两个 SDK 的错误均带 code（如 NoSuchBucket / AccessDenied / SignatureDoesNotMatch）
+// 与 HTTP 状态（ali-oss 为 status，minio 为 statuscode），此处统一读取
+function normalizeOssError(e: unknown): BusinessError {
   const err = e as {
     status?: number
+    statuscode?: number
     code?: string
     name?: string
     message?: string
   }
+  const status = err.status ?? err.statuscode
 
   // 网络超时
-  if (err.code === 'ETIMEDOUT' || err.status === 504 || err.name === 'ConnectionTimeoutError') {
-    return new BusinessError(
-      'OSS_TIMEOUT',
-      `OSS 连接超时（${Date.now() - startedAt}ms）`,
-      504,
-    )
+  if (err.code === 'ETIMEDOUT' || status === 504 || err.name === 'ConnectionTimeoutError') {
+    return new BusinessError('OSS_TIMEOUT', 'OSS 连接超时', 504)
   }
 
   // 鉴权失败
-  if (err.status === 401 || err.code === 'SignatureDoesNotMatch' || err.code === 'InvalidAccessKeyId') {
+  if (status === 401 || err.code === 'SignatureDoesNotMatch' || err.code === 'InvalidAccessKeyId') {
     return new BusinessError(
       'OSS_AUTH_FAILED',
-      `AccessKey 无效或签名错误（${err.code ?? err.status}）`,
+      `AccessKey 无效或签名错误（${err.code ?? status}）`,
       401,
     )
   }
 
   // bucket 不存在 / 无权访问
-  if (err.status === 404 || err.code === 'NoSuchBucket') {
+  if (status === 404 || err.code === 'NoSuchBucket') {
     return new BusinessError(
       'OSS_BUCKET_NOT_FOUND',
       `Bucket 不存在或无权访问（${err.message ?? 'unknown'}）`,
       404,
     )
   }
-  if (err.status === 403 || err.code === 'AccessDenied') {
+  if (status === 403 || err.code === 'AccessDenied') {
     return new BusinessError(
       'OSS_BUCKET_FORBIDDEN',
       `OSS 拒绝访问（${err.message ?? 'AccessDenied'}）`,
@@ -382,12 +538,8 @@ function normalizeOssError(e: unknown, startedAt: number): BusinessError {
   }
 
   // 文件过大
-  if (err.code === 'ExceedFileSizeLimit' || err.status === 413) {
-    return new BusinessError(
-      'OSS_FILE_TOO_LARGE',
-      '文件超过 OSS 允许大小',
-      413,
-    )
+  if (err.code === 'ExceedFileSizeLimit' || status === 413) {
+    return new BusinessError('OSS_FILE_TOO_LARGE', '文件超过 OSS 允许大小', 413)
   }
 
   return new BusinessError(

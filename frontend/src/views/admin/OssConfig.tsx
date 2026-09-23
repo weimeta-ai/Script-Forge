@@ -1,8 +1,9 @@
-// 阿里云 OSS 图床配置页（admin only）— AI 生成图片持久化
+// OSS 图床配置页（admin only）— AI 生成图片持久化（双存储模式）
 // -----------------------------------------------------------------------------
 // 结构：Sidebar → Hero → 配置表单（含测试连接按钮）→ URL 转存测试区域
-// 字段：name / region / bucket / accessKeyId / accessKeySecret /
+// 字段：provider / name / region / bucket / accessKeyId / accessKeySecret /
 //       endpoint / customDomain / pathPrefix / timeoutMs
+// 模式：aliyun = 阿里云 OSS；minio = S3 兼容（MinIO，endpoint 必填）
 // 复用：与 ImageConfig 行为一致；样式 import ImageConfig.module.css（避免重复）
 // -----------------------------------------------------------------------------
 
@@ -30,7 +31,7 @@ import {
 import { AppShell, type BarItem } from '../../components/shell';
 import { slideUp, staggerContainer } from '../../lib/animations';
 import { RequestError } from '../../lib/request';
-import type { OssConfigResponse } from '../../types/oss-config';
+import type { OssConfigResponse, OssProvider } from '../../types/oss-config';
 import styles from './ImageConfig.module.css';
 
 export default function OssConfig() {
@@ -71,8 +72,8 @@ export default function OssConfig() {
 						<span className={styles.heroGradient}>阿里云 OSS 图床配置</span>
 					</h1>
 					<p className={styles.heroSubtitle}>
-						配置阿里云 OSS 凭据，用于持久化 AI 生成图片（image-config/generate 返回的临时 URL
-						转存为永久 URL）。独立于 MinIO（导出文件存储）。配置优先级：DB &gt; env 兜底。
+						配置对象存储凭据，用于持久化 AI 生成图片（image-config/generate 返回的临时 URL
+						转存为永久 URL）。支持阿里云 OSS 与 MinIO（S3 兼容）两种模式。配置优先级：DB &gt; env 兜底。
 					</p>
 				</motion.div>
 			</motion.div>
@@ -99,7 +100,12 @@ function OssConfigForm({ data }: { data: OssConfigResponse }) {
 	const uploadMutation = useUploadByUrl();
 
 	const [name, setName] = useState(cur?.name ?? 'default');
-	const [region, setRegion] = useState(cur?.region ?? data.fallback.region ?? '');
+	const [provider, setProvider] = useState<OssProvider>(
+		cur?.provider ?? data.fallback.provider ?? 'aliyun',
+	);
+	const [region, setRegion] = useState(
+		cur?.region ?? data.fallback.region ?? (data.fallback.provider === 'minio' ? 'us-east-1' : ''),
+	);
 	const [bucket, setBucket] = useState(cur?.bucket ?? data.fallback.bucket ?? '');
 	const [endpoint, setEndpoint] = useState(cur?.endpoint ?? data.fallback.endpoint ?? '');
 	const [customDomain, setCustomDomain] = useState(
@@ -129,6 +135,7 @@ function OssConfigForm({ data }: { data: OssConfigResponse }) {
 		setTestResult(null);
 		updateMutation.mutate({
 			name,
+			provider,
 			accessKeyId: accessKeyId || undefined,
 			accessKeySecret: accessKeySecret || undefined,
 			region,
@@ -144,6 +151,7 @@ function OssConfigForm({ data }: { data: OssConfigResponse }) {
 		setTestResult(null);
 		try {
 			const result = await testMutation.mutateAsync({
+				provider,
 				accessKeyId: accessKeyId || undefined,
 				accessKeySecret: accessKeySecret || undefined,
 				region: region || undefined,
@@ -227,17 +235,38 @@ function OssConfigForm({ data }: { data: OssConfigResponse }) {
 
 				<div className={styles.fieldRow}>
 					<label className={styles.field}>
+						<span className={styles.fieldLabel}>存储模式</span>
+						<select
+							className={styles.input}
+							value={provider}
+							onChange={(e) => setProvider(e.target.value as OssProvider)}
+						>
+							<option value="aliyun">阿里云 OSS</option>
+							<option value="minio">MinIO（S3 兼容）</option>
+						</select>
+						<span className={styles.fieldHint}>
+							{provider === 'aliyun'
+								? '阿里云 OSS 专有协议（HMAC-SHA1 签名）'
+								: 'S3 协议，兼容 MinIO / AWS S3（SigV4 签名）'}
+						</span>
+					</label>
+				</div>
+
+				<div className={styles.fieldRow}>
+					<label className={styles.field}>
 						<span className={styles.fieldLabel}>地域</span>
 						<input
 							className={styles.input}
 							value={region}
 							onChange={(e) => setRegion(e.target.value)}
-							placeholder="oss-cn-hangzhou"
-							pattern="^oss-[a-z]+-[a-z0-9-]+$"
+							placeholder={provider === 'aliyun' ? 'oss-cn-hangzhou' : 'us-east-1'}
+							pattern={provider === 'aliyun' ? '^oss-[a-z]+-[a-z0-9-]+$' : undefined}
 							required
 						/>
 						<span className={styles.fieldHint}>
-							地域 ID，如 oss-cn-hangzhou / oss-cn-shanghai / oss-cn-beijing
+							{provider === 'aliyun'
+								? '地域 ID，如 oss-cn-hangzhou / oss-cn-shanghai / oss-cn-beijing'
+								: 'S3 模式无地域概念，固定填 us-east-1 即可'}
 						</span>
 					</label>
 
@@ -303,15 +332,22 @@ function OssConfigForm({ data }: { data: OssConfigResponse }) {
 
 				<div className={styles.fieldRow}>
 					<label className={styles.field}>
-						<span className={styles.fieldLabel}>Endpoint（可选）</span>
+						<span className={styles.fieldLabel}>
+							Endpoint{provider === 'aliyun' ? '（可选）' : ''}
+						</span>
 						<input
 							className={styles.input}
 							value={endpoint}
 							onChange={(e) => setEndpoint(e.target.value)}
-							placeholder="留空由 region 自动推导"
+							placeholder={
+								provider === 'aliyun' ? '留空由 region 自动推导' : 'http://localhost:9000'
+							}
+							required={provider === 'minio'}
 						/>
 						<span className={styles.fieldHint}>
-							私有化部署或特殊 endpoint 才需要填，默认 https://{'{region}'}.aliyuncs.com
+							{provider === 'aliyun'
+								? '私有化部署或特殊 endpoint 才需要填，默认 https://{"{region}"}.aliyuncs.com'
+								: 'MinIO 服务地址（必填）；浏览器访问签名 URL 也走此地址，需保证可达'}
 						</span>
 					</label>
 

@@ -27,8 +27,11 @@ export const ossSettings = pgTable(
     // 固定 id = 1（singleton 模式）
     id: integer('id').primaryKey().default(1),
 
-    // 配置名称（便于人工识别，如 "aliyun-prod" / "aliyun-dev"）
+    // 配置名称（便于人工识别，如 "aliyun-prod" / "minio-local"）
     name: varchar('name', { length: 64 }).notNull().default('default'),
+
+    // 存储模式：aliyun = 阿里云 OSS（专有签名）；minio = S3 兼容（MinIO / AWS S3，SigV4 签名）
+    provider: varchar('provider', { length: 16 }).notNull().default('aliyun'),
 
     // 阿里云 AccessKey Id（敏感字段，repository 出参时脱敏）
     accessKeyId: varchar('access_key_id', { length: 128 }).notNull(),

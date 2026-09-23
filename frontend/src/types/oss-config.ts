@@ -4,8 +4,12 @@
 // 字段语义与 image-config 一致：name + AK/SK 脱敏 + region/bucket
 
 // 脱敏的 OSS 配置（GET /oss-config 返回）
+export type OssProvider = 'aliyun' | 'minio';
+
+// 脱敏的 OSS 配置（GET /oss-config 返回）
 export interface OssConfigMasked {
 	name: string;
+	provider: OssProvider; // 存储模式：aliyun = 阿里云 OSS；minio = S3 兼容（MinIO）
 	accessKeyIdMasked: string; // 形如 LTAI****xyZ
 	accessKeySecretMasked: string;
 	region: string; // 例如 "oss-cn-hangzhou"
@@ -20,6 +24,7 @@ export interface OssConfigMasked {
 
 // env 兜底配置
 export interface OssConfigFallback {
+	provider: OssProvider;
 	accessKeyId: string;
 	accessKeySecret: string;
 	region: string;
@@ -34,13 +39,15 @@ export interface OssConfigFallback {
 export interface OssConfigResponse {
 	current: OssConfigMasked | null;
 	fallback: OssConfigFallback;
-	provider: 'aliyun-oss';
+	// 当前生效的存储模式（DB 未配置时取 env）：aliyun-oss / minio
+	provider: 'aliyun-oss' | 'minio';
 }
 
 // PUT /oss-config 请求体
 // accessKeyId / accessKeySecret 留空表示沿用 DB（与 image-config 一致）
 export interface UpdateOssConfigInput {
 	name: string;
+	provider: OssProvider;
 	accessKeyId?: string;
 	accessKeySecret?: string;
 	region: string;
@@ -53,6 +60,7 @@ export interface UpdateOssConfigInput {
 
 // POST /oss-config/test 测试连接
 export interface TestOssConfigInput {
+	provider?: OssProvider;
 	accessKeyId?: string;
 	accessKeySecret?: string;
 	region?: string;

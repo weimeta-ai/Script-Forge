@@ -148,13 +148,14 @@ class LoginBannerService {
     // 复用 createOssClient：仅在 OSS 已配置时尝试，未配置则跳过
     try {
       const { getEffectiveOssConfig } = await import('./oss-config.service')
-      const { createOssClient } = await import('../lib/oss-client')
+      const { createOssAdapter } = await import('../lib/oss-client')
       const effective = await getEffectiveOssConfig()
       if (!effective.accessKeyId || !effective.accessKeySecret) {
         // OSS 未配置（图片可能是直接写库的旧数据），跳过 OSS 删除
         return
       }
-      const client = createOssClient({
+      const adapter = createOssAdapter({
+        provider: effective.provider,
         accessKeyId: effective.accessKeyId,
         accessKeySecret: effective.accessKeySecret,
         region: effective.region,
@@ -162,7 +163,7 @@ class LoginBannerService {
         endpoint: effective.endpoint,
         timeout: effective.timeoutMs,
       })
-      await client.delete(row.ossKey)
+      await adapter.remove(row.ossKey)
     } catch (e) {
       // OSS 删除失败不阻塞业务（DB 已删，最多 OSS 残留一个对象）
       logger.warn(

@@ -10,12 +10,11 @@
 //   - OSS 未配置时原样返回（不阻塞读取流程，前端会显示默认图）
 //
 // 实现细节：
-//   - ali-oss signatureUrl 是同步函数（内部计算 HMAC-SHA1 签名）
-//   - 但创建 client 需要 await getEffectiveOssConfig()，故整体签名流程是 async
+//   - 签名走 OssAdapter 接口（aliyun = HMAC-SHA1 / minio = S3 SigV4 预签名）
+//   - 创建 adapter 需要 await getEffectiveOssConfig()，故整体签名流程是 async
 // =============================================================================
 
-import OSS from 'ali-oss'
-import { createOssClient } from './oss-client'
+import { createOssAdapter } from './oss-client'
 import { getEffectiveOssConfig } from '../services/oss-config.service'
 
 // 默认签名有效期：1 小时
@@ -43,15 +42,17 @@ export async function signObjectUrl(
     if (!cfg.accessKeyId || !cfg.accessKeySecret) {
       return stored
     }
-    const client: OSS = createOssClient({
+    const adapter = createOssAdapter({
+      provider: cfg.provider,
       accessKeyId: cfg.accessKeyId,
       accessKeySecret: cfg.accessKeySecret,
       region: cfg.region,
       bucket: cfg.bucket,
       endpoint: cfg.endpoint,
+      customDomain: cfg.customDomain,
       timeout: cfg.timeoutMs,
     })
-    return client.signatureUrl(stored, { expires: expiresSec })
+    return await adapter.signUrl(stored, expiresSec)
   } catch {
     // OSS 配置缺失或签名失败时，回退原值（前端会显示默认图）
     return stored
