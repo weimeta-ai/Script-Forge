@@ -33,6 +33,7 @@ ossConfigRoutes.get('/', requireAuth, requireRole('admin'), async (c) => {
   return ok(c, {
     current: config,
     fallback: {
+      provider: process.env.OSS_PROVIDER === 'minio' ? ('minio' as const) : ('aliyun' as const),
       accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
       accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
       region: process.env.OSS_REGION ?? '',
@@ -42,7 +43,8 @@ ossConfigRoutes.get('/', requireAuth, requireRole('admin'), async (c) => {
       pathPrefix: process.env.OSS_PATH_PREFIX ?? 'drama/images',
       timeoutMs: Number(process.env.OSS_TIMEOUT_MS ?? 60000),
     },
-    provider: 'aliyun-oss' as const,
+    // 当前生效的存储模式（DB 未配置时取 env）
+    provider: (config?.provider === 'minio' ? 'minio' : 'aliyun-oss') as 'aliyun-oss' | 'minio',
   })
 })
 

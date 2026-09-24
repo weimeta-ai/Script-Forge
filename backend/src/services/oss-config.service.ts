@@ -1,11 +1,11 @@
 // =============================================================================
-// 阿里云 OSS 图床配置业务服务层
+// OSS 图床配置业务服务层（双模式：阿里云 / MinIO S3 兼容）
 // -----------------------------------------------------------------------------
 // 职责：
 //   - getEffectiveConfig  当前生效配置（DB > env）
 //   - getMasked           给前端展示（脱敏 AK/SK）
 //   - update              UPSERT
-//   - testConnection      用新/旧配置发一次 list（max-keys=1）
+//   - testConnection      按 provider 发一次连通性探测
 //   - uploadFromUrl       远程 URL 转存（核心：AI 图片持久化）
 //   - uploadBuffer        后端代理 multipart 上传
 //
@@ -22,11 +22,12 @@ import {
 } from '../repositories/oss-settings.repository'
 import { BusinessError } from '../lib/errors'
 import {
-  createOssClient,
+  createOssAdapter,
   testOssConnectivity,
   uploadBuffer as ossUploadBuffer,
   uploadFromUrl as ossUploadFromUrl,
   generateObjectKey,
+  type OssProvider,
 } from '../lib/oss-client'
 import type {
   UpdateOssConfigInput,
@@ -37,6 +38,7 @@ import type {
 // env 兜底（OSS 功能可选，env 缺失时返回空字符串）
 function getOssEnvFallback() {
   return {
+    provider: normalizeProvider(process.env.OSS_PROVIDER),
     accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
     accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
     region: process.env.OSS_REGION ?? '',
@@ -48,7 +50,13 @@ function getOssEnvFallback() {
   }
 }
 
+// provider 宽松解析（env 值不可信，非法值回退 aliyun 保持旧行为）
+function normalizeProvider(value: string | undefined): OssProvider {
+  return value === 'minio' ? 'minio' : 'aliyun'
+}
+
 export interface OssEffectiveConfig {
+  provider: OssProvider
   accessKeyId: string
   accessKeySecret: string
   region: string
@@ -67,6 +75,7 @@ export async function getEffectiveOssConfig(): Promise<OssEffectiveConfig> {
   const fromDb = await ossSettingsRepository.getPlain()
   if (fromDb) {
     return {
+      provider: normalizeProvider(fromDb.provider),
       accessKeyId: fromDb.accessKeyId,
       accessKeySecret: fromDb.accessKeySecret,
       region: fromDb.region,
@@ -81,6 +90,7 @@ export async function getEffectiveOssConfig(): Promise<OssEffectiveConfig> {
   }
   const env = getOssEnvFallback()
   return {
+    provider: env.provider,
     accessKeyId: env.accessKeyId,
     accessKeySecret: env.accessKeySecret,
     region: env.region,
@@ -125,6 +135,7 @@ export async function updateOssConfig(input: UpdateOssConfigInput): Promise<OssS
 
   const updated = await ossSettingsRepository.upsert({
     name: input.name,
+    provider: input.provider,
     accessKeyId: finalAccessKeyId,
     accessKeySecret: finalAccessKeySecret,
     region: input.region,
@@ -137,13 +148,14 @@ export async function updateOssConfig(input: UpdateOssConfigInput): Promise<OssS
   return toOssMasked(updated)
 }
 
-// 测试连接：列 1 个对象验证凭据 + bucket 访问权
+// 测试连接：按 provider 发一次连通性探测（aliyun=list / minio=bucketExists）
 export async function testOssConnection(input: TestOssConfigInput): Promise<{
   ok: boolean
   latencyMs: number
   bucketEcho: string
   regionEcho: string
 }> {
+  let finalProvider = input.provider
   let finalAccessKeyId = input.accessKeyId
   let finalAccessKeySecret = input.accessKeySecret
   let finalRegion = input.region
@@ -153,6 +165,7 @@ export async function testOssConnection(input: TestOssConfigInput): Promise<{
   // 任一字段缺失，从 DB/env 兜底取
   if (!finalAccessKeyId || !finalAccessKeySecret || !finalRegion || !finalBucket) {
     const effective = await getEffectiveOssConfig()
+    finalProvider = finalProvider ?? effective.provider
     finalAccessKeyId = finalAccessKeyId ?? effective.accessKeyId
     finalAccessKeySecret = finalAccessKeySecret ?? effective.accessKeySecret
     finalRegion = finalRegion ?? effective.region
@@ -176,7 +189,8 @@ export async function testOssConnection(input: TestOssConfigInput): Promise<{
   }
 
   const effective = await getEffectiveOssConfig()
-  const client = createOssClient({
+  const adapter = createOssAdapter({
+    provider: finalProvider ?? 'aliyun',
     accessKeyId: finalAccessKeyId,
     accessKeySecret: finalAccessKeySecret,
     region: finalRegion,
@@ -185,7 +199,7 @@ export async function testOssConnection(input: TestOssConfigInput): Promise<{
     timeout: effective.timeoutMs,
   })
 
-  return testOssConnectivity(client, { bucket: finalBucket, region: finalRegion })
+  return testOssConnectivity(adapter)
 }
 
 // 远程 URL 转存到 OSS（核心场景：AI 图片临时 URL → OSS 永久 URL）
@@ -205,24 +219,23 @@ export async function uploadImageFromUrl(input: UploadByUrlInput): Promise<{
     )
   }
 
-  const client = createOssClient({
+  const client = createOssAdapter({
+    provider: effective.provider,
     accessKeyId: effective.accessKeyId,
     accessKeySecret: effective.accessKeySecret,
     region: effective.region,
     bucket: effective.bucket,
     endpoint: effective.endpoint,
+    customDomain: effective.customDomain,
     timeout: effective.timeoutMs,
   })
 
   const result = await ossUploadFromUrl({
-    client,
+    adapter: client,
     sourceUrl: input.url,
     pathPrefix: effective.pathPrefix,
     filename: input.filename,
     contentType: input.contentType,
-    bucket: effective.bucket,
-    region: effective.region,
-    customDomain: effective.customDomain,
   })
 
   return {
@@ -252,12 +265,14 @@ export async function uploadImageFromBuffer(args: {
     )
   }
 
-  const client = createOssClient({
+  const client = createOssAdapter({
+    provider: effective.provider,
     accessKeyId: effective.accessKeyId,
     accessKeySecret: effective.accessKeySecret,
     region: effective.region,
     bucket: effective.bucket,
     endpoint: effective.endpoint,
+    customDomain: effective.customDomain,
     timeout: effective.timeoutMs,
   })
 
@@ -269,13 +284,10 @@ export async function uploadImageFromBuffer(args: {
   const key = generateObjectKey(effective.pathPrefix, ext)
 
   const result = await ossUploadBuffer({
-    client,
+    adapter: client,
     key,
     buffer: args.buffer,
     contentType: args.contentType,
-    bucket: effective.bucket,
-    region: effective.region,
-    customDomain: effective.customDomain,
   })
 
   return {

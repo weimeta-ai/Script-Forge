@@ -5,7 +5,7 @@
 //   - 头部展示用户头像/用户名/当前余额
 //   - 调配方式 tabs：增加积分 | 扣减积分
 //   - 增加积分：固定 2000/4000/6000 三档快捷按钮 + 自定义数量输入
-//   - 调配原因下拉推荐 + 自定义
+//   - 调配原因选填，内容自定义（datalist 提供快捷推荐）
 //   - 调配后余额预览（扣减不允许小于 0）
 //   - 最近变动 5 条 + 查看全部记录链接
 //   - 二次确认 Modal（用户/类型/数量/调配后余额/原因）
@@ -41,15 +41,6 @@ interface Props {
 
 const QUICK_AMOUNTS = [2000, 4000, 6000]
 
-const REASON_OPTIONS = [
-	'展会现场充值',
-	'现场体验补发',
-	'异常任务补偿',
-	'__custom__'
-] as const
-
-type ReasonOption = typeof REASON_OPTIONS[number]
-
 export function CreditAdjustDrawer({ userId, open, onClose }: Props) {
 	// 抽屉关闭时仍保留 userId 以做退出动画
 	const effectiveUserId = userId ?? ''
@@ -80,9 +71,7 @@ function DrawerInner({
 	// 调配方式：add=增加积分（recharge/compensate），deduct=扣减积分
 	const [mode, setMode] = useState<'add' | 'deduct'>('add')
 	const [amount, setAmount] = useState<number>(2000) // 正整数（提交时按 mode 转 delta 符号）
-	const [reasonOption, setReasonOption] =
-		useState<ReasonOption>('展会现场充值')
-	const [customReason, setCustomReason] = useState('')
+	const [reason, setReason] = useState('') // 调配原因：选填，内容自定义
 	const [category, setCategory] = useState<AdjustCategory>('recharge')
 	const [confirmOpen, setConfirmOpen] = useState(false)
 	const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -106,16 +95,9 @@ function DrawerInner({
 	const balanceAfter = currentBalance + delta
 	const invalidDeduct = mode === 'deduct' && balanceAfter < 0
 	const invalidAmount = amount <= 0 || !Number.isInteger(amount)
-	const invalidReason =
-		reasonOption === '__custom__' ? !customReason.trim() : !reasonOption
+	const finalRemark = reason.trim() // 选填：空白归一为空串
 	const canSubmit =
-		!invalidAmount &&
-		!invalidDeduct &&
-		!invalidReason &&
-		!adjustMutation.isPending
-
-	const finalRemark =
-		reasonOption === '__custom__' ? customReason.trim() : reasonOption
+		!invalidAmount && !invalidDeduct && !adjustMutation.isPending
 
 	// 切换 mode 时重置 amount 和 category
 	function switchMode(next: 'add' | 'deduct') {
@@ -143,11 +125,6 @@ function DrawerInner({
 		setSuccessMsg(null)
 	}
 
-	function handleReasonChange(v: ReasonOption) {
-		setReasonOption(v)
-		setSuccessMsg(null)
-	}
-
 	function openConfirm() {
 		if (!canSubmit) return
 		setConfirmOpen(true)
@@ -157,13 +134,13 @@ function DrawerInner({
 		if (!canSubmit) return
 		const input: AdjustCreditsInput = {
 			delta,
-			remark: finalRemark,
+			remark: finalRemark || undefined, // 选填：空则不传，落库 NULL
 			category
 		}
 		adjustMutation.mutate(input, {
 			onSuccess: (res) => {
 				setSuccessMsg(
-					`调配成功：${finalRemark}，当前余额 ${fmtCredits(
+					`调配成功${finalRemark ? `：${finalRemark}` : ''}，当前余额 ${fmtCredits(
 						res.balanceAfter
 					)}`
 				)
@@ -340,34 +317,25 @@ function DrawerInner({
 						)}
 					</div>
 
-					{/* 调配原因 */}
+					{/* 调配原因（选填，内容自定义；datalist 提供快捷推荐） */}
 					<div className={styles.field}>
-						<span className={styles.label}>调配原因（必填）</span>
-						<select
-							className={styles.select}
-							value={reasonOption}
-							onChange={(e) =>
-								handleReasonChange(
-									e.target.value as ReasonOption
-								)
-							}
-						>
-							<option value="展会现场充值">展会现场充值</option>
-							<option value="现场体验补发">现场体验补发</option>
-							<option value="异常任务补偿">异常任务补偿</option>
-							<option value="__custom__">其他（自定义）</option>
-						</select>
-						{reasonOption === '__custom__' && (
-							<input
-								className={styles.input}
-								placeholder="请输入调配原因"
-								value={customReason}
-								onChange={(e) =>
-									setCustomReason(e.target.value)
-								}
-								maxLength={255}
-							/>
-						)}
+						<span className={styles.label}>调配原因（选填）</span>
+						<input
+							className={styles.input}
+							list="credit-reason-options"
+							placeholder="请输入调配原因，可不填"
+							value={reason}
+							onChange={(e) => {
+								setReason(e.target.value)
+								setSuccessMsg(null)
+							}}
+							maxLength={255}
+						/>
+						<datalist id="credit-reason-options">
+							<option value="展会现场充值" />
+							<option value="现场体验补发" />
+							<option value="异常任务补偿" />
+						</datalist>
 					</div>
 
 					{/* 余额预览 */}
@@ -669,7 +637,9 @@ function ConfirmModal({
 					</div>
 					<div className={styles.confirmRow}>
 						<span className={styles.confirmLabel}>调配原因</span>
-						<span className={styles.confirmValue}>{reason}</span>
+						<span className={styles.confirmValue}>
+							{reason || '—'}
+						</span>
 					</div>
 				</div>
 				<div className={styles.confirmActions}>

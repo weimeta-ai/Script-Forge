@@ -16,6 +16,7 @@ import { maskApiKey } from './llm-settings.repository'
 // 完整配置类型（含明文 AK/SK）— 仅内部使用
 export interface OssSettingsPlain {
   name: string
+  provider: string
   accessKeyId: string
   accessKeySecret: string
   region: string
@@ -30,6 +31,7 @@ export interface OssSettingsPlain {
 // 脱敏配置类型（前端展示用）
 export interface OssSettingsMasked {
   name: string
+  provider: string
   accessKeyIdMasked: string
   accessKeySecretMasked: string
   region: string
@@ -55,6 +57,7 @@ class OssSettingsRepository {
 
   async upsert(input: {
     name: string
+    provider: string
     accessKeyId: string
     accessKeySecret: string
     region: string
@@ -69,6 +72,7 @@ class OssSettingsRepository {
       .values({
         id: 1,
         name: input.name,
+        provider: input.provider,
         accessKeyId: input.accessKeyId,
         accessKeySecret: input.accessKeySecret,
         region: input.region,
@@ -82,6 +86,7 @@ class OssSettingsRepository {
         target: ossSettings.id,
         set: {
           name: input.name,
+          provider: input.provider,
           accessKeyId: input.accessKeyId,
           accessKeySecret: input.accessKeySecret,
           region: input.region,
@@ -100,6 +105,7 @@ class OssSettingsRepository {
   private toPlain(row: OssSettings): OssSettingsPlain {
     return {
       name: row.name,
+      provider: row.provider,
       accessKeyId: row.accessKeyId,
       accessKeySecret: row.accessKeySecret,
       region: row.region,
@@ -119,6 +125,7 @@ export const ossSettingsRepository = new OssSettingsRepository()
 export function toOssMasked(plain: OssSettingsPlain): OssSettingsMasked {
   return {
     name: plain.name,
+    provider: plain.provider,
     accessKeyIdMasked: maskApiKey(plain.accessKeyId),
     accessKeySecretMasked: maskApiKey(plain.accessKeySecret),
     region: plain.region,
